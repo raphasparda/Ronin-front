@@ -27,6 +27,15 @@ function useMenuContext(): MenuContextValue {
 
 const MENU_WIDTH = 256;
 
+function isOutsideViewport(rect: DOMRect): boolean {
+  return (
+    rect.bottom <= 0 ||
+    rect.right <= 0 ||
+    rect.top >= window.innerHeight ||
+    rect.left >= window.innerWidth
+  );
+}
+
 function menuItems(menu: HTMLElement | null): HTMLElement[] {
   return menu
     ? Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]'))
@@ -77,14 +86,16 @@ export function Menu({
     const items = menuItems(menuRef.current).filter(
       (item) => item.getAttribute('aria-disabled') !== 'true',
     );
-    (focusOnOpen === 'last' ? items.at(-1) : items[0])?.focus();
+    (focusOnOpen === 'last' ? items.at(-1) : items[0])?.focus({ preventScroll: true });
 
     const onPointerDown = (event: PointerEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    const onViewportChange = (event: Event) => {
-      if (event.type === 'scroll' && containerRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
+    // Rolar só reposiciona o menu (useAnchoredPosition). Ele fecha quando o botão sai da tela:
+    // no celular, focar o botão rola o carrossel de listas logo depois de o menu abrir.
+    const onViewportChange = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect || isOutsideViewport(rect)) setOpen(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('resize', onViewportChange);
@@ -117,7 +128,7 @@ export function Menu({
     const items = menuItems(menuRef.current);
     const index = items.indexOf(document.activeElement as HTMLElement);
     const focusAt = (next: number) =>
-      items[((next % items.length) + items.length) % items.length]?.focus();
+      items[((next % items.length) + items.length) % items.length]?.focus({ preventScroll: true });
 
     if (event.key === 'Escape') {
       event.preventDefault();

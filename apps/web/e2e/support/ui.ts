@@ -142,9 +142,9 @@ export async function closeCard(dialog: Locator): Promise<void> {
 }
 
 /**
- * Abre um menu pelo botão e espera o primeiro item focado. Repete se o menu fechar sozinho: no
- * carrossel de listas do celular, rolar até o botão dispara o `scroll-snap`, e o menu fecha em
- * qualquer rolagem (com o dedo, a pessoa só toca depois que a rolagem para).
+ * Abre um menu pelo botão e espera o primeiro item focado. Repete se o menu fechar sozinho (rede
+ * de segurança: no carrossel de listas do celular, rolar até o botão dispara o `scroll-snap`; o
+ * menu só fecha se o botão sair da tela).
  */
 export async function openMenu(page: Page, buttonName: string): Promise<Locator> {
   const button = page.getByRole('button', { name: buttonName, exact: true });

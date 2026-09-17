@@ -68,8 +68,8 @@ test('quadro: criar com listas coloridas → nova lista com a próxima cor → t
 
   await test.step('B3: trocar a cor pelo teclado (menu da lista → "Cor da lista…" → setas)', async () => {
     const menuButton = page.getByRole('button', { name: 'Opções da lista Revisão' });
-    // No celular o foco rola o carrossel de listas e a rolagem fecha o menu recém-aberto: espera
-    // a rolagem assentar e repete (com toque o menu abre normalmente).
+    // No celular o foco rola o carrossel de listas logo depois de abrir o menu; a rolagem só o
+    // reposiciona (fecharia apenas se o botão saísse da tela). O `toPass` fica como rede.
     await expect(async () => {
       await menuButton.focus();
       await page.keyboard.press('Enter');

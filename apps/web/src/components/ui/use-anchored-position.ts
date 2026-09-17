@@ -73,6 +73,20 @@ function sameStyle(a: CSSProperties | null, b: CSSProperties): boolean {
   );
 }
 
+const px = (value: CSSProperties['top']) => (typeof value === 'number' ? `${value}px` : '');
+
+/**
+ * Aplica a posição direto no DOM, na hora: o painel acabou de montar sem `style` (na posição
+ * estática, dentro do contêiner com rolagem) e o foco inicial roda antes do novo render. Focar o
+ * item ali rolava o carrossel de listas no celular, e a rolagem fechava o menu.
+ */
+function applyStyle(panel: HTMLElement, style: CSSProperties) {
+  panel.style.top = px(style.top);
+  panel.style.bottom = px(style.bottom);
+  panel.style.left = px(style.left);
+  panel.style.maxHeight = px(style.maxHeight);
+}
+
 /**
  * Mantém o painel preso ao botão enquanto estiver aberto: recalcula ao rolar (na hora) e a cada
  * quadro, para acompanhar mudanças de layout (conteúdo que cresce acima do botão, teclado virtual).
@@ -101,6 +115,7 @@ export function useAnchoredPosition({
       sideRef.current,
     );
     sideRef.current = next.bottom === undefined ? 'below' : 'above';
+    applyStyle(panel, next);
     setStyle((current) => (sameStyle(current, next) ? current : next));
   }, [anchorRef, panelRef, width, align]);
 

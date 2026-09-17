@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Modal } from './Dialog';
+import { Menu, MenuItem } from './Menu';
 import { Popover } from './Popover';
 import { computeAnchoredPosition } from './use-anchored-position';
 
@@ -96,6 +97,66 @@ describe('Popover', () => {
     await user.click(screen.getByRole('button', { name: 'Abrir' }));
     await user.click(screen.getByText('Fora'));
     expect(screen.queryByRole('group', { name: 'Painel' })).toBeNull();
+  });
+});
+
+describe('Menu', () => {
+  it('o primeiro item recebe o foco já com o painel posicionado (sem rolar o contêiner)', async () => {
+    const user = userEvent.setup();
+    render(
+      <Menu label="Opções" trigger="⋯">
+        <MenuItem onSelect={() => {}}>Renomear</MenuItem>
+      </Menu>,
+    );
+    const button = screen.getByRole('button', { name: 'Opções' });
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(rect(100, 40, 200, 40));
+    let styleAtFocus = '';
+    const onFocus = (event: FocusEvent) => {
+      const panel = (event.target as HTMLElement).closest('[role="menu"]')?.parentElement
+        ?.parentElement;
+      styleAtFocus = panel?.getAttribute('style') ?? '';
+    };
+    document.addEventListener('focusin', onFocus);
+
+    await user.click(button);
+
+    document.removeEventListener('focusin', onFocus);
+    expect(screen.getByRole('menuitem', { name: 'Renomear' })).toHaveFocus();
+    expect(styleAtFocus).toContain('top: 148px');
+    expect(styleAtFocus).toContain('left: 16px');
+  });
+});
+
+describe('Menu ao rolar', () => {
+  function renderMenu() {
+    render(
+      <Menu label="Opções" trigger="⋯">
+        <MenuItem onSelect={() => {}}>Renomear</MenuItem>
+      </Menu>,
+    );
+    return screen.getByRole('button', { name: 'Opções' });
+  }
+
+  it('continua aberto quando a rolagem mantém o botão na tela (só reposiciona)', async () => {
+    const user = userEvent.setup();
+    const button = renderMenu();
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(rect(100, 40, 200, 40));
+    await user.click(button);
+
+    fireEvent.scroll(document.body);
+    expect(screen.getByRole('menu', { name: 'Opções' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Renomear' })).toHaveFocus();
+  });
+
+  it('fecha quando a rolagem tira o botão da tela', async () => {
+    const user = userEvent.setup();
+    const button = renderMenu();
+    const box = vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(rect(100, 40, 200, 40));
+    await user.click(button);
+
+    box.mockReturnValue(rect(-200, 40, 200, 40));
+    fireEvent.scroll(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 });
 
