@@ -230,13 +230,13 @@ describe('Detalhe: responsáveis', () => {
     expect(within(dialog).getByText('Ninguém ainda')).toBeVisible();
   });
 
-  it('responsável desativado aparece marcado e pode ser removido', async () => {
+  it('responsável com conta desativada aparece marcado e pode ser removido', async () => {
     patchSeed(CARD_IDS.campaign, { assigneeIds: [DEACTIVATED_ID] });
     const dialog = await openDialog(CARD_IDS.campaign, 'Publicar campanha');
 
     await waitFor(() =>
       expect(within(dialog).getByRole('list', { name: 'Responsáveis' })).toHaveTextContent(
-        'Carla Dias (desativado)',
+        'Carla Dias (conta desativada)',
       ),
     );
     expect(within(dialog).getByRole('button', { name: 'Remover Carla Dias' })).toBeVisible();

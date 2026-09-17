@@ -30,6 +30,7 @@ export function useAdminUsers() {
   });
 }
 
+/** Troca a pessoa na lista do Admin e relê `['users']` (papel e conta ativa aparecem lá). */
 function useReplaceAdminUser() {
   const queryClient = useQueryClient();
   return (user: AdminUser) => {
@@ -37,6 +38,7 @@ function useReplaceAdminUser() {
       data ? { users: data.users.map((item) => (item.id === user.id ? user : item)) } : data,
     );
     void queryClient.invalidateQueries({ queryKey: adminUsersQueryKey });
+    void queryClient.invalidateQueries({ queryKey: usersQueryKey });
   };
 }
 
@@ -63,7 +65,6 @@ export function useSetUserActive() {
 /** Irreversível: nome vira "Usuário removido" e o e-mail é apagado (nomes em cache são relidos). */
 export function useAnonymizeUser() {
   const replace = useReplaceAdminUser();
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (userId: string) =>
       api.post(
@@ -71,10 +72,7 @@ export function useAnonymizeUser() {
         { confirm: true } satisfies AnonymizeUserRequest,
         { schema: adminUserResponseSchema },
       ),
-    onSuccess: ({ user }) => {
-      replace(user);
-      void queryClient.invalidateQueries({ queryKey: usersQueryKey });
-    },
+    onSuccess: ({ user }) => replace(user),
   });
 }
 

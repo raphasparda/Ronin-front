@@ -53,7 +53,7 @@ export const INVITE_MESSAGES = {
     'Ele pode ter expirado, já ter sido usado ou ter sido cancelado. Peça um novo link a quem convidou você.',
   emailTaken: 'Já existe uma conta com este e-mail. Entre com ela ou use outro e-mail.',
   emailMismatch: 'Este convite é para outro e-mail. Use o e-mail do convite.',
-  welcome: (name: string) => `Bem-vindo à equipe, ${firstName(name)}.`,
+  welcome: (name: string) => `Boas-vindas à equipe, ${firstName(name)}.`,
 } as const;
 
 const ROLE_TEXT = { admin: 'Admin', member: 'Membro' } as const;

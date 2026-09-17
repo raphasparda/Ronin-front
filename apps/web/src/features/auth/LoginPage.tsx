@@ -155,7 +155,7 @@ export function LoginPage() {
       title="Entrar"
       footer={
         <p className="text-muted">
-          Esqueceu a senha? Peça um link de redefinição ao administrador da equipe.
+          Esqueceu a senha? Peça um link de redefinição a quem administra a equipe.
         </p>
       }
     >

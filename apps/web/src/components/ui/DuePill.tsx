@@ -19,7 +19,11 @@ export interface DuePillProps {
 
 /** Prazo com estado por ícone e texto (RN17); nada quando o card está aberto e sem prazo. */
 export function DuePill({ card, timeZone, now, className }: DuePillProps) {
-  const due = describeDue(card, timeZone, now);
+  return <DueStatePill due={describeDue(card, timeZone, now)} className={className} />;
+}
+
+/** Mesma pílula a partir do prazo já descrito (a face do card calcula `describeDue` uma vez). */
+export function DueStatePill({ due, className }: { due: DueDisplay | null; className?: string }) {
   if (!due) return null;
   const { status, icon: Icon } = STATUS[due.state];
 

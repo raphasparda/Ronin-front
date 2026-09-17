@@ -157,6 +157,28 @@ export function mergeSummary(
   };
 }
 
+/**
+ * Rollback de mover/concluir/reabrir: devolve só os campos de lugar e conclusão **deste** card
+ * (as outras mutações otimistas da fila continuam aplicadas). Se o card saiu do quadro, volta.
+ */
+export function restoreCardPlacement(payload: BoardPayload, previous: CardSummary): BoardPayload {
+  if (!payload.cards.some((card) => card.id === previous.id)) {
+    return { ...payload, cards: [...payload.cards, previous] };
+  }
+  const { boardId, listId, position, status, completedAt } = previous;
+  return {
+    ...payload,
+    cards: payload.cards.map((card) =>
+      card.id === previous.id ? { ...card, boardId, listId, position, status, completedAt } : card,
+    ),
+  };
+}
+
+export function restoreDetailPlacement(detail: CardDetail, previous: CardDetail): CardDetail {
+  const { boardId, listId, position, status, completedAt, completedBy, board, list } = previous;
+  return { ...detail, boardId, listId, position, status, completedAt, completedBy, board, list };
+}
+
 export function setCardDetail(
   queryClient: QueryClient,
   cardId: string,
@@ -387,8 +409,9 @@ export interface MoveCardVariables {
   source: 'drag' | 'dialog';
 }
 
+/** Estado do card antes do movimento otimista (só dele: o rollback não desfaz a fila). */
 interface MoveSnapshot {
-  payload: BoardPayload | undefined;
+  card: CardSummary | undefined;
   detail: CardDetail | undefined;
 }
 
@@ -432,10 +455,12 @@ export function useMoveCard(boardId: string, callbacks: MoveCardCallbacks) {
       callbacks.onSuccess(result, variables);
     },
     onError: (error, variables) => {
-      const { snapshot } = variables;
-      if (snapshot.payload) queryClient.setQueryData(boardQueryKey(boardId), snapshot.payload);
-      if (snapshot.detail)
-        queryClient.setQueryData(cardQueryKey(variables.card.id), snapshot.detail);
+      const { card, detail } = variables.snapshot;
+      if (card)
+        setBoardData(queryClient, boardId, (payload) => restoreCardPlacement(payload, card));
+      if (detail) {
+        setCardDetail(queryClient, detail.id, (current) => restoreDetailPlacement(current, detail));
+      }
       callbacks.onError(error, variables);
     },
     onSettled: async (_data, _error, { card, toBoard }) => {
@@ -457,8 +482,9 @@ export function useMoveCard(boardId: string, callbacks: MoveCardCallbacks) {
       const key = boardQueryKey(boardId);
       void queryClient.cancelQueries({ queryKey: key });
       void queryClient.cancelQueries({ queryKey: cardQueryKey(variables.card.id) });
+      const payload = queryClient.getQueryData<BoardPayload>(key);
       const snapshot: MoveSnapshot = {
-        payload: queryClient.getQueryData<BoardPayload>(key),
+        card: payload?.cards.find((card) => card.id === variables.card.id),
         detail: queryClient.getQueryData<CardDetail>(cardQueryKey(variables.card.id)),
       };
       const destination = {
@@ -466,8 +492,8 @@ export function useMoveCard(boardId: string, callbacks: MoveCardCallbacks) {
         listId: variables.toList.id,
         placement: variables.placement,
       };
-      if (snapshot.payload) {
-        const next = moveCardInPayload(snapshot.payload, variables.card.id, destination);
+      if (payload) {
+        const next = moveCardInPayload(payload, variables.card.id, destination);
         if (next) {
           queryClient.setQueryData(key, next);
           const moved = next.cards.find((card) => card.id === variables.card.id);

@@ -33,7 +33,7 @@ export const MEMBER_MESSAGES = {
   self: 'Você não pode fazer isso com a sua própria conta.',
   anonymized: 'Esta conta foi anonimizada.',
   reactivateFirst: 'Reative a conta antes de gerar o link.',
-  notFound: 'Membro não encontrado. A lista foi atualizada.',
+  notFound: 'Pessoa não encontrada. A lista foi atualizada.',
   anonymizedDone: 'A conta foi anonimizada. O nome agora aparece como "Usuário removido".',
   deactivateFirst: 'Desative a conta antes de anonimizar.',
 } as const;
@@ -53,9 +53,9 @@ function mutationErrorToast(error: unknown) {
 }
 
 function StatusPill({ user }: { user: AdminUser }) {
-  if (user.anonymized) return <Pill>Anonimizado</Pill>;
-  if (user.status === 'deactivated') return <Pill color="gray">Desativado</Pill>;
-  return <Pill color="green">Ativo</Pill>;
+  if (user.anonymized) return <Pill>Conta anonimizada</Pill>;
+  if (user.status === 'deactivated') return <Pill color="gray">Conta desativada</Pill>;
+  return <Pill color="green">Conta ativa</Pill>;
 }
 
 const ROLE_OPTIONS: ReadonlyArray<{ value: Role; label: string }> = [

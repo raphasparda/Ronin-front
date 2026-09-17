@@ -1,16 +1,26 @@
-import type { BoardPayload, CardDetail, CardMutationResult, CardSummary } from '@kanban/shared';
+import {
+  comparePosition,
+  type BoardPayload,
+  type CardDetail,
+  type CardMutationResult,
+  type CardSummary,
+  type Placement,
+} from '@kanban/shared';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 
 import { toast, type ToastAction } from '../../components/ui/toast-store';
-import { isApiError } from '../../lib/api-client';
+import { api, isApiError } from '../../lib/api-client';
 import { handleBoardError, useBoardErrorHandler } from '../boards/board-errors';
-import { boardQueryKey } from '../boards/boards-api';
+import { boardQueryKey, fetchBoard } from '../boards/boards-api';
+import { myCardsQueryKey } from '../my-cards/my-cards-api';
 import { CARD_MESSAGES, completionSuffix } from './card-messages';
 import {
   CARD_LINK_STATE,
+  cardActivityQueryKey,
   cardPath,
   cardQueryKey,
+  cardsInList,
   fetchCard,
   useArchiveCard,
   useMoveCard,
@@ -113,6 +123,51 @@ export interface CompletionRequest {
   /** `my-cards`: toast simples com "Desfazer"; `board`: reabrir movido oferece "Ver card". */
   source: 'detail' | 'board' | 'my-cards';
   announce?: (message: string) => void;
+  /**
+   * "Desfazer" de uma conclusão: o card como estava antes de concluir. Depois de reabrir, se o
+   * servidor o tirou da lista, ele volta para a lista e o lugar de antes.
+   */
+  undo?: { card: CardSummary; listName: string };
+}
+
+/**
+ * Lugar do card antes de concluir, no quadro de agora: logo depois do último card que estava
+ * antes dele na lista (ou no topo). `null` quando a lista sumiu ou virou lista de conclusão.
+ */
+export function placementBefore(payload: BoardPayload, original: CardSummary): Placement | null {
+  const list = payload.lists.find((item) => item.id === original.listId);
+  if (!list || list.archivedAt !== null || list.isDoneList) return null;
+  const previous = cardsInList(payload.cards, list.id)
+    .filter((card) => card.id !== original.id)
+    .findLast((card) => comparePosition(card.position, original.position) < 0);
+  return previous ? { type: 'after', id: previous.id } : { type: 'start' };
+}
+
+/** Move o card reaberto de volta para onde estava; `false` se não deu (fica onde o reopen pôs). */
+async function moveBack(
+  queryClient: QueryClient,
+  original: CardSummary,
+  reopened: CardSummary,
+): Promise<boolean> {
+  if (reopened.listId === original.listId) return true;
+  try {
+    const payload = await queryClient.fetchQuery({
+      queryKey: boardQueryKey(original.boardId),
+      queryFn: ({ signal }) => fetchBoard(original.boardId, signal),
+      staleTime: 0,
+    });
+    const placement = placementBefore(payload, original);
+    if (!placement) return false;
+    await api.post(`/api/cards/${original.id}/move`, { toListId: original.listId, placement });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    void queryClient.invalidateQueries({ queryKey: boardQueryKey(original.boardId) });
+    void queryClient.invalidateQueries({ queryKey: cardQueryKey(original.id) });
+    void queryClient.invalidateQueries({ queryKey: cardActivityQueryKey(original.id) });
+    void queryClient.invalidateQueries({ queryKey: myCardsQueryKey });
+  }
 }
 
 /** Nome da lista final do card: do quadro ou do detalhe em cache; senão, relê o detalhe. */
@@ -135,9 +190,12 @@ async function listNameOf(queryClient: QueryClient, card: CardSummary): Promise<
 
 async function completionMessage(
   queryClient: QueryClient,
-  { card, action, list, source }: CompletionRequest,
+  { card, action, list, source, undo }: CompletionRequest,
   result: CardMutationResult,
 ): Promise<string> {
+  if (undo && (await moveBack(queryClient, undo.card, result.card))) {
+    return CARD_MESSAGES.completionUndone(undo.listName);
+  }
   const moved = result.card.listId !== card.listId;
   if (action === 'complete') {
     if (source === 'my-cards' || !moved) return CARD_MESSAGES.completed;
@@ -156,7 +214,8 @@ async function completionMessage(
 
 /**
  * Concluir e reabrir com o retorno de screens §0.3 e §8.3: toast (e anúncio `aria-live`) pela
- * resposta; em Meus cards, "Desfazer" reabre; erro volta o estado e avisa.
+ * resposta; em Meus cards, "Desfazer" reabre e devolve o card ao lugar de antes; erro volta o
+ * estado e avisa.
  */
 export function useCardCompletionAction() {
   const queryClient = useQueryClient();
@@ -171,7 +230,15 @@ export function useCardCompletionAction() {
       if (source === 'my-cards' && action === 'complete') {
         toastAction = {
           label: 'Desfazer',
-          onClick: () => run({ card: result.card, action: 'reopen', list: null, source, announce }),
+          onClick: () =>
+            run({
+              card: result.card,
+              action: 'reopen',
+              list: null,
+              source,
+              announce,
+              undo: { card, listName: request.list?.name ?? '' },
+            }),
         };
       } else if (source === 'board' && action === 'reopen' && result.card.listId !== card.listId) {
         toastAction = {

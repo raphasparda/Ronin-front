@@ -14,12 +14,12 @@
 | `/login` | Login (`?next=<rota>`) | Público |
 | `/convite#token=…` | Aceitar convite | Público |
 | `/redefinir-senha#token=…` | Nova senha | Público |
-| `/` | Quadros ativos | Logado |
-| `/quadros/arquivados` | Quadros arquivados | Logado |
-| `/b/:boardId` | Quadro | Logado |
-| `/b/:boardId/c/:cardId` | Detalhe do card (diálogo sobre o quadro, URL compartilhável) | Logado |
-| `/meus-cards` | Meus cards | Logado |
-| `/perfil` | Perfil | Logado |
+| `/` | Quadros ativos | Com sessão |
+| `/quadros/arquivados` | Quadros arquivados | Com sessão |
+| `/b/:boardId` | Quadro | Com sessão |
+| `/b/:boardId/c/:cardId` | Detalhe do card (diálogo sobre o quadro, URL compartilhável) | Com sessão |
+| `/meus-cards` | Meus cards | Com sessão |
+| `/perfil` | Perfil | Com sessão |
 | `/admin/membros`, `/admin/convites`, `/admin/workspace` | Administração (abas) | Admin |
 
 Notificações não têm rota: são um popover no desktop e um Sheet de tela cheia no mobile.
@@ -110,8 +110,8 @@ O switch de tema fica sem os ícones de sol e lua em telas menores que 400px. O 
             ┌──────────────────────────────────────────┐
             │ [▮▮▮] Kanban                             │
             │ Configurar a equipe                      │  28px 700
-            │ Crie a conta de administrador. Você      │
-            │ convida as outras pessoas depois.        │
+            │ Crie a conta de Admin. Você convida as   │
+            │ outras pessoas depois.                   │
             │ Nome da equipe       [                ]  │
             │ Seu nome             [                ]  │
             │ E-mail               [                ]  │
@@ -138,7 +138,7 @@ A validação acontece no blur e no envio. No envio, o foco vai para o primeiro 
 
 ## 3. Login (`/login`)
 
-Mesmo cartão: "Entrar", E-mail, Senha (mostrar/ocultar) e [Entrar]. Rodapé: "Esqueceu a senha? Peça um link de redefinição ao administrador da equipe." Não há cadastro nem "esqueci minha senha" clicável.
+Mesmo cartão: "Entrar", E-mail, Senha (mostrar/ocultar) e [Entrar]. Rodapé: "Esqueceu a senha? Peça um link de redefinição a quem administra a equipe." Não há cadastro nem "esqueci minha senha" clicável.
 
 | Estado | Microcopy |
 | ---- | ---- |
@@ -171,7 +171,7 @@ Use pelo menos 10 caracteres.
 | 409 `EMAIL_TAKEN` | No campo: "Já existe uma conta com este e-mail. Entre com ela ou use outro e-mail." |
 | 409 `INVITE_EMAIL_MISMATCH` | "Este convite é para outro e-mail. Use o e-mail do convite." |
 | 429 | "Muitas tentativas. Tente de novo em {x minutos}." |
-| Sucesso | Sessão criada → `/`, com o toast "Bem-vindo à equipe, Ana." |
+| Sucesso | Sessão criada → `/`, com o toast "Boas-vindas à equipe, Ana." |
 
 ## 5. Redefinir senha (`/redefinir-senha#token=…`)
 
@@ -185,7 +185,7 @@ Use pelo menos 10 caracteres. Ao salvar, você sai de todos os dispositivos.
 
 | Estado | Microcopy |
 | ---- | ---- |
-| 410 | "Este link não vale mais. Peça um novo ao administrador da equipe." |
+| 410 | "Este link não vale mais. Peça um novo a quem administra a equipe." |
 | Enviando | "Salvando…" |
 | Sucesso | `/login` com a faixa "Senha alterada. Entre com a nova senha." |
 
@@ -275,7 +275,7 @@ Ver quadros arquivados →
 ```text
 ┌ Marcar "Entregue" como lista de conclusão? ─────────────────── ✕ ┐
 │ Os 4 cards abertos desta lista serão marcados como concluídos,  │
-│ com você como autor da conclusão.                               │
+│ com a conclusão registrada em seu nome.                         │
 │ A lista Concluído deixa de ser a lista de conclusão. Os cards   │  ← só se já existe outra lista de conclusão
 │ que estão nela continuam concluídos.                            │
 │ A partir de agora, cards movidos para Entregue são concluídos   │
@@ -284,7 +284,7 @@ Ver quadros arquivados →
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-  - Singular: "O card aberto desta lista será marcado como concluído, com você como autor da conclusão." / botão "Marcar e concluir 1 card".
+  - Singular: "O card aberto desta lista será marcado como concluído, com a conclusão registrada em seu nome." / botão "Marcar e concluir 1 card".
   - Sucesso (usa `completedCardIds.length` da resposta): toast "{Entregue} agora é a lista de conclusão. 4 cards foram concluídos." Os cards ganham a pílula "Concluído", e o `aria-live` anuncia a mesma frase.
   - Se a contagem da resposta for diferente da exibida (alguém mexeu antes), o toast usa o número real.
 - **Desmarcar:** sem dialog. Toast: "{Entregue} deixou de ser a lista de conclusão. Os cards dela continuam concluídos."
@@ -410,7 +410,7 @@ As datas ficam no fuso do workspace, com o ano só quando é diferente do atual.
 
 ### 7.8 Arquivar e excluir quadro
 
-- **Arquivar:** "Arquivar "Site institucional"? Ele sai da lista de quadros de todos. Você pode restaurar depois." → `/`, com o toast "Quadro arquivado." + [Desfazer].
+- **Arquivar:** "Arquivar "Site institucional"? Ele sai da lista de quadros de toda a equipe. Você pode restaurar depois." → `/`, com o toast "Quadro arquivado." + [Desfazer].
 - **Excluir (Admin):** Dialog danger "Excluir quadro definitivamente" / "Isto apaga o quadro, as listas, os cards, os comentários e o histórico. Não dá para desfazer." / "Para confirmar, digite: **Site institucional**" + campo. [Excluir quadro] fica desabilitado até o nome bater (trim). Erro `CONFIRMATION_MISMATCH`: "O nome digitado não confere."
 - **Excluir card (Admin):** "Excluir o card definitivamente? Não dá para desfazer."
 
@@ -523,7 +523,7 @@ As datas ficam no fuso do workspace, com o ano só quando é diferente do atual.
 ### 8.5 Responsáveis
 
 - "+ Adicionar" abre um popover com a busca "Buscar pessoa" e os **membros ativos**. "Eu" vem primeiro. A gravação é imediata.
-- ✕ por pessoa (`aria-label="Remover Ana Souza"`). Desativado: "(desativado)", fora do popover.
+- ✕ por pessoa (`aria-label="Remover Ana Souza"`). Com conta desativada: "(conta desativada)", fora do popover.
 - Vazio: "Ninguém ainda" + "Atribuir a mim". Busca sem resultado: "Ninguém encontrado com esse nome."
 - 409 `USER_NOT_ACTIVE`: "Essa pessoa foi desativada e não pode ser atribuída."
 
@@ -552,7 +552,7 @@ As datas ficam no fuso do workspace, com o ano só quando é diferente do atual.
 - Item: avatar, nome 600, data relativa (`<time>` com `title`), "(editado)" e corpo em 16px.
 - O autor edita e exclui. O Admin só exclui (403 ao editar de outro).
 - Excluir: inline "Excluir este comentário? [Excluir] [Cancelar]".
-- Anonimizado: "Usuário removido". Vazio: "Nenhum comentário ainda."
+- Conta anonimizada: "Usuário removido". Vazio: "Nenhum comentário ainda."
 - Erro: o texto fica no campo, com "Não foi possível enviar o comentário. Tente de novo."
 
 **Histórico** (`GET /cards/:id/activity`, o mais recente primeiro, só leitura; nomes de lista e prioridades aparecem como pílulas pequenas):
@@ -601,7 +601,7 @@ Cards abertos atribuídos a você, em todos os quadros, por prazo e prioridade.
   - 1ª linha: título 14px 600 + `PriorityPill` + `DuePill`;
   - 2ª linha: quadro › `ListPill`, etiquetas, checklist, comentários.
   - O sr lê "Prioridade urgente" dentro do rótulo do link.
-- **Concluir rápido:** `IconButton` ✓ (`aria-label="Concluir {título}"`). A linha sai com o toast "Card concluído." + [Desfazer] (chama `reopen`; com lista de conclusão, o card vai para o topo da primeira lista, e o toast de desfazer explica "Card reaberto e movido para o topo de A fazer.").
+- **Concluir rápido:** `IconButton` ✓ (`aria-label="Concluir {título}"`). A linha sai com o toast "Card concluído." + [Desfazer]. Desfazer chama `reopen` e, se o servidor tirou o card da lista (lista de conclusão), `move` de volta para a lista de antes, logo depois do card que o precedia (ou no topo): "Conclusão desfeita. O card voltou para Fazendo." Se a lista de antes foi arquivada ou virou lista de conclusão, o card fica onde o `reopen` o pôs e o toast explica ("Card reaberto e movido para o topo de A fazer.").
 - Polling de 60 s e ao focar a aba.
 - Mobile: as pílulas descem para a 2ª linha, e o ✓ fica com 40px.
 
@@ -641,18 +641,18 @@ Título "Administração" e abas-link **Membros** (`/admin/membros`), **Convites
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────────────┐
-│ Nome                         E-mail               Papel         Status          ⋯ │
-│ (RS) Raphael Sparda (você)   raphael@…            Admin         (● Ativo)         │
-│ (AS) Ana Souza               ana@…                [Membro ▾]    (● Ativo)       ⋯ │
-│ (JP) João Pedro              joao@…               Membro        (Desativado)    ⋯ │
-│ (?)  Usuário removido        —                    Membro        (Anonimizado)     │
+│ Nome                        E-mail              Papel       Status               ⋯ │
+│ (RS) Raphael Sparda (você)  raphael@…           Admin       (● Conta ativa)        │
+│ (AS) Ana Souza              ana@…               [Membro ▾]  (● Conta ativa)      ⋯ │
+│ (JP) João Pedro             joao@…              Membro      (Conta desativada)   ⋯ │
+│ (?)  Usuário removido       —                   Membro      (Conta anonimizada)    │
 └────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- Tabela em `bg-surface rounded-lg shadow-sm`. **Mobile:** um cartão por membro.
-- **Status:** "Ativo" (pílula verde), "Desativado" (`gray`), "Anonimizado" (neutra).
+- Tabela em `bg-surface rounded-lg shadow-sm`. **Mobile:** um cartão por pessoa.
+- **Status:** "Conta ativa" (pílula verde), "Conta desativada" (`gray`), "Conta anonimizada" (neutra).
 - **Papel:**
-  - `select` inline. Rebaixar confirma: "Tornar Ana Souza Membro? Ela deixa de acessar a administração." Toast: "Papel de Ana Souza alterado para Membro."
+  - `select` inline. Rebaixar confirma: "Tornar Ana Souza Membro? Essa pessoa deixa de acessar a administração." Toast: "Papel de Ana Souza alterado para Membro."
   - A **própria linha** não tem select nem menu (`CANNOT_TARGET_SELF`). Mostra o texto "Você".
   - `LAST_ADMIN`: o select e o "Desativar" ficam desabilitados, com "É o último Admin ativo."
 - **Menu ⋯:**
@@ -665,8 +665,8 @@ Título "Administração" e abas-link **Membros** (`/admin/membros`), **Convites
   - Input readonly mono 13px + [⧉ Copiar link] ("✓ Copiado" por 2 s).
   - Aviso `text-warning`: "Este link não aparece de novo. Gerar outro cancela este."
   - Falha ao copiar: "Não foi possível copiar. Selecione o link e copie manualmente."
-- **Desativar** (danger): "Desativar Ana Souza? Ela sai de todos os dispositivos e não consegue mais entrar. Links de redefinição pendentes são cancelados. Os cards e comentários dela continuam." Toast: "Ana Souza foi desativada."
-- **Reativar:** sem Dialog. Toast: "Ana Souza foi reativada. Gere um link de redefinição se ela não lembrar a senha."
+- **Desativar** (danger): "Desativar Ana Souza? A pessoa sai de todos os dispositivos e não consegue mais entrar. Links de redefinição pendentes são cancelados. Os cards e comentários dessa conta continuam." Toast: "A conta de Ana Souza foi desativada."
+- **Reativar:** sem Dialog. Toast: "A conta de Ana Souza foi reativada. Gere um link de redefinição se a pessoa não lembrar a senha."
 - **Anonimizar** (danger, digitar `ANONIMIZAR`): "O nome vira "Usuário removido" e o e-mail é apagado. Os cards e comentários continuam. Não dá para desfazer."
 
 ### 11.2 Convites
@@ -679,7 +679,7 @@ Título "Administração" e abas-link **Membros** (`/admin/membros`), **Convites
   - Em seguida vem o Dialog de link: "Envie este link para a pessoa. Ele vale por 7 dias e funciona uma vez só." + "Este link não aparece de novo."
 - `EMAIL_TAKEN`: "Já existe uma conta com este e-mail."
 - **Revogar:** inline "Revogar este convite? O link deixa de funcionar." Toast: "Convite revogado."
-- Vazio: "Nenhum convite pendente." Só você na equipe: "Você está sozinho por aqui. Convide alguém para começar."
+- Vazio: "Nenhum convite pendente." Só você na equipe: "Por enquanto, só você está por aqui. Convide alguém para começar."
 
 ### 11.3 Equipe (`/admin/workspace`)
 

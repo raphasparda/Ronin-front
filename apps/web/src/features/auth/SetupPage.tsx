@@ -165,7 +165,7 @@ export function SetupPage() {
   return (
     <AuthLayout
       title="Configurar a equipe"
-      description="Crie a conta de administrador. Você convida as outras pessoas depois."
+      description="Crie a conta de Admin. Você convida as outras pessoas depois."
     >
       <title>Configurar a equipe · Ronin</title>
       <form noValidate onSubmit={(event) => void onSubmit(event)}>

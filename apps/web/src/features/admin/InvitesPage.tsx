@@ -30,7 +30,7 @@ export const INVITE_ADMIN_MESSAGES = {
   emailTaken: 'Já existe uma conta com este e-mail.',
   revoked: 'Convite revogado.',
   noPending: 'Nenhum convite pendente.',
-  alone: 'Você está sozinho por aqui. Convide alguém para começar.',
+  alone: 'Por enquanto, só você está por aqui. Convide alguém para começar.',
 } as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;

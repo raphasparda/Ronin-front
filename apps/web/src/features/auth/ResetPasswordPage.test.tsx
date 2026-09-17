@@ -37,7 +37,7 @@ describe('/redefinir-senha', () => {
     const { router } = renderApp(`/redefinir-senha#token=${TOKEN}`);
 
     expect(await screen.findByRole('heading', { name: 'Este link não vale mais' })).toBeVisible();
-    expect(screen.getByText('Peça um novo ao administrador da equipe.')).toBeVisible();
+    expect(screen.getByText('Peça um novo a quem administra a equipe.')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Ir para o login' })).toBeVisible();
     expect(router.state.location.hash).toBe('');
   });

@@ -1,6 +1,8 @@
+import { dateTimeFormat } from './intl';
+
 function parts(date: Date, options: Intl.DateTimeFormatOptions): Record<string, string> {
   const result: Record<string, string> = {};
-  for (const part of new Intl.DateTimeFormat('pt-BR', options).formatToParts(date)) {
+  for (const part of dateTimeFormat('pt-BR', options).formatToParts(date)) {
     result[part.type] = part.value;
   }
   return result;

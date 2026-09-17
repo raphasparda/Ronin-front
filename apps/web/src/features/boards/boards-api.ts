@@ -24,6 +24,8 @@ import {
 } from '@tanstack/react-query';
 
 import { api, apiRequest } from '../../lib/api-client';
+import { cardQueryKey } from '../cards/cards-api';
+import { myCardsQueryKey } from '../my-cards/my-cards-api';
 
 export const BOARD_POLL_INTERVAL_MS = 30_000;
 
@@ -46,14 +48,17 @@ export function useBoards(archived: boolean) {
   });
 }
 
+export function fetchBoard(boardId: string, signal?: AbortSignal): Promise<BoardPayload> {
+  return api.get(`/api/boards/${boardId}`, { schema: boardPayloadSchema, signal });
+}
+
 export function useBoard(boardId: string, { paused = false }: { paused?: boolean } = {}) {
   const movingLists = useIsMutating({ mutationKey: moveListMutationKey(boardId) }) > 0;
   const movingCards = useIsMutating({ mutationKey: moveCardMutationKey(boardId) }) > 0;
   const moving = movingLists || movingCards;
   return useQuery({
     queryKey: boardQueryKey(boardId),
-    queryFn: ({ signal }) =>
-      api.get(`/api/boards/${boardId}`, { schema: boardPayloadSchema, signal }),
+    queryFn: ({ signal }) => fetchBoard(boardId, signal),
     refetchInterval: paused || moving ? false : BOARD_POLL_INTERVAL_MS,
     meta: { silentErrors: true },
   });
@@ -194,6 +199,12 @@ export function useUpdateList(boardId: string) {
       if (context?.previous) queryClient.setQueryData(boardQueryKey(boardId), context.previous);
     },
     onSuccess: ({ lists, completedCardIds }) => {
+      if (completedCardIds.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: myCardsQueryKey });
+        for (const cardId of completedCardIds) {
+          void queryClient.invalidateQueries({ queryKey: cardQueryKey(cardId) });
+        }
+      }
       const completedAt = new Date().toISOString();
       const completed = new Set(completedCardIds);
       setBoardData(queryClient, boardId, (payload) => ({

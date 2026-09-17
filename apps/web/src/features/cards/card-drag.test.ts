@@ -64,6 +64,55 @@ describe('arrastar cards', () => {
     expect(resolveCardDrop(original, original, 'b', null)).toBeNull();
   });
 
+  it('cards ainda sendo criados (id temporário) nunca viram vizinho do placement', () => {
+    const withTemp: CardOrder = { todo: ['a', 'tmp1', 'b', 'c'], doing: ['d'] };
+    const pending = new Set(['tmp1']);
+
+    // c sobe para o lugar de b, logo depois de tmp1: o vizinho conhecido anterior é a.
+    expect(
+      resolveCardDrop(withTemp, withTemp, 'c', { type: 'card', id: 'b' }, undefined, pending),
+    ).toEqual({ listId: 'todo', position: 3, placement: { type: 'after', id: 'a' } });
+
+    // Sem pendentes, o mesmo arraste usaria o temporário.
+    expect(resolveCardDrop(withTemp, withTemp, 'c', { type: 'card', id: 'b' })?.placement).toEqual({
+      type: 'after',
+      id: 'tmp1',
+    });
+
+    // Vindo de outra lista, d entra logo depois de tmp1.
+    const current = moveAcrossLists(withTemp, 'd', { type: 'card', id: 'b' });
+    expect(
+      resolveCardDrop(
+        withTemp,
+        current,
+        'd',
+        { type: 'list-body', listId: 'todo' },
+        undefined,
+        pending,
+      ),
+    ).toEqual({ listId: 'todo', position: 3, placement: { type: 'after', id: 'a' } });
+
+    // Temporário no topo: logo depois dele vira "start".
+    const tempFirst: CardOrder = { todo: ['tmp1', 'a', 'b'] };
+    expect(
+      resolveCardDrop(tempFirst, tempFirst, 'b', { type: 'card', id: 'a' }, undefined, pending)
+        ?.placement,
+    ).toEqual({ type: 'start' });
+
+    // Com filtro: o temporário também sai da ordem completa.
+    const visible: CardOrder = { todo: ['a', 'b'] };
+    expect(
+      resolveCardDrop(
+        visible,
+        visible,
+        'b',
+        { type: 'card', id: 'a' },
+        { todo: ['x', 'tmp1', 'a', 'b'] },
+        pending,
+      )?.placement,
+    ).toEqual({ type: 'after', id: 'x' });
+  });
+
   describe('com filtro ativo (vizinhos visíveis)', () => {
     // Ordem completa: a, x, b, y, c. Ocultos pelo filtro: x e y.
     const full: CardOrder = { todo: ['a', 'x', 'b', 'y', 'c'], doing: ['d', 'z'] };

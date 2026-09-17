@@ -36,13 +36,14 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { useMutationState } from '@tanstack/react-query';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { Button } from '../../components/ui/Button';
 import { ColorSwatchPicker } from '../../components/ui/ColorSwatchPicker';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { Dialog } from '../../components/ui/Dialog';
 import { toast } from '../../components/ui/toast-store';
+import { useStableHandlers } from '../../lib/use-stable-handlers';
 import { CARD_MESSAGES } from '../cards/card-messages';
 import {
   buildCardOrder,
@@ -110,6 +111,8 @@ interface BoardListsProps {
 function cardCountLabel(count: number): string {
   return count === 1 ? '1 card' : `${count} cards`;
 }
+
+const NO_CARDS: readonly string[] = [];
 
 /** Tempo em que o clique que encerra um arraste é ignorado (não abre o card). */
 const CLICK_AFTER_DRAG_MS = 250;
@@ -188,25 +191,27 @@ export function BoardLists({
   const dragStartOrder = useRef<CardOrder | null>(null);
   const lastDragEnd = useRef(0);
 
-  const pendingCardIds = new Set(
-    useMutationState({
-      filters: { mutationKey: ['create-card', boardId], status: 'pending' },
-      select: (mutation) => (mutation.state.variables as CreateCardVariables | undefined)?.tempId,
-    }).filter((id): id is string => id !== undefined),
+  const pendingKey = useMutationState({
+    filters: { mutationKey: ['create-card', boardId], status: 'pending' },
+    select: (mutation) => (mutation.state.variables as CreateCardVariables | undefined)?.tempId,
+  })
+    .filter((id): id is string => id !== undefined)
+    .join(',');
+  const pendingCardIds = useMemo(
+    () => new Set(pendingKey ? pendingKey.split(',') : []),
+    [pendingKey],
   );
 
   const cardsById = useMemo(
     () => new Map(payload.cards.map((card) => [card.id, card])),
     [payload.cards],
   );
-  const pendingKey = [...pendingCardIds].join(',');
   const visibleCards = useMemo(() => {
     if (!filter) return payload.cards;
-    const pending = new Set(pendingKey.split(','));
     return payload.cards.filter(
-      (card) => pending.has(card.id) || matchesBoardFilter(card, filter, now),
+      (card) => pendingCardIds.has(card.id) || matchesBoardFilter(card, filter, now),
     );
-  }, [filter, now, payload.cards, pendingKey]);
+  }, [filter, now, payload.cards, pendingCardIds]);
   const cardOrder = useMemo(
     () => dragOrder ?? buildCardOrder(lists, visibleCards),
     [dragOrder, lists, visibleCards],
@@ -281,6 +286,7 @@ export function BoardLists({
             cardId,
             dragTarget(over),
             filter ? buildCardOrder(lists, payload.cards) : undefined,
+            pendingCardIds,
           )
         : null;
     const list = drop ? lists.find((item) => item.id === drop.listId) : undefined;
@@ -297,12 +303,7 @@ export function BoardLists({
     endCardDrag();
   };
 
-  const isClickSuppressed = useCallback(
-    () => Date.now() - lastDragEnd.current < CLICK_AFTER_DRAG_MS,
-    [],
-  );
-
-  const cardActions: CardFaceActions = {
+  const cardActions = useStableHandlers<CardFaceActions>({
     onMove: setMovingCard,
     onArchive: (card) =>
       archiving.archive({
@@ -330,8 +331,8 @@ export function BoardLists({
         announce,
       });
     },
-    isClickSuppressed,
-  };
+    isClickSuppressed: () => Date.now() - lastDragEnd.current < CLICK_AFTER_DRAG_MS,
+  });
 
   const addCard = async (list: List, title: string) => {
     try {
@@ -412,7 +413,7 @@ export function BoardLists({
     });
   };
 
-  const actions: ListColumnActions = {
+  const actions = useStableHandlers<ListColumnActions>({
     onStartRename: (list) => setRenamingId(list.id),
     onStopRename: () => setRenamingId(null),
     onEmptyName: () => toast.error(LIST_MESSAGES.emptyName),
@@ -445,7 +446,8 @@ export function BoardLists({
       if (count === 0) archive(list);
       else setConfirmArchive({ list, count });
     },
-  };
+  });
+  const { addCard: onAddCard } = useStableHandlers({ addCard });
 
   const changeColor = (list: List, color: PaletteColor) => {
     if (color === list.color) return;
@@ -500,7 +502,8 @@ export function BoardLists({
                     total={lists.length}
                     cardCount={payload.cards.filter((card) => card.listId === list.id).length}
                     filtered={filter !== null}
-                    cards={(cardOrder[list.id] ?? []).flatMap((id) => cardsById.get(id) ?? [])}
+                    cardIds={cardOrder[list.id] ?? NO_CARDS}
+                    cardsById={cardsById}
                     pendingCardIds={pendingCardIds}
                     dropTarget={
                       activeCard !== undefined && (cardOrder[list.id] ?? []).includes(activeCard.id)
@@ -509,7 +512,7 @@ export function BoardLists({
                     renaming={renamingId === list.id}
                     actions={actions}
                     cardActions={cardActions}
-                    onAddCard={addCard}
+                    onAddCard={onAddCard}
                   />
                 </li>
               ))}
@@ -535,7 +538,9 @@ export function BoardLists({
         open={colorList !== null}
         title={`Cor da lista ${colorList?.name ?? ''}`}
         onClose={() => setColorListId(null)}
-        description={<p>A cor muda para todos na hora. O nome da lista continua visível.</p>}
+        description={
+          <p>A cor muda para toda a equipe na hora. O nome da lista continua visível.</p>
+        }
         footer={<Button onClick={() => setColorListId(null)}>Concluir</Button>}
       >
         {colorList && (
@@ -555,8 +560,8 @@ export function BoardLists({
             <>
               <p>
                 {confirmDone.count === 1
-                  ? 'O card aberto desta lista será marcado como concluído, com você como autor da conclusão.'
-                  : `Os ${confirmDone.count} cards abertos desta lista serão marcados como concluídos, com você como autor da conclusão.`}
+                  ? 'O card aberto desta lista será marcado como concluído, com a conclusão registrada em seu nome.'
+                  : `Os ${confirmDone.count} cards abertos desta lista serão marcados como concluídos, com a conclusão registrada em seu nome.`}
               </p>
               {currentDone && currentDone.id !== confirmDone.list.id && (
                 <p>

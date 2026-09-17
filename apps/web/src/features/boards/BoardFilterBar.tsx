@@ -132,7 +132,8 @@ export function useFilterOptions(payload: BoardPayload) {
     .filter((user) => user.id !== me?.id && (user.status === 'active' || assignedIds.has(user.id)))
     .map((user) => ({
       value: user.id,
-      text: user.status === 'active' ? displayName(user) : `${displayName(user)} (desativado)`,
+      text:
+        user.status === 'active' ? displayName(user) : `${displayName(user)} (conta desativada)`,
     }));
   const assignees: FilterOption[] = [...(me ? [{ value: me.id, text: 'Eu' }] : []), ...people];
 

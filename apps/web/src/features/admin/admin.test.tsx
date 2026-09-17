@@ -68,8 +68,8 @@ describe('/admin/membros', () => {
     expect(within(self).queryByRole('combobox')).not.toBeInTheDocument();
     expect(within(self).queryByRole('button', { name: /Ações para/ })).not.toBeInTheDocument();
 
-    expect(within(memberRow('Carla Dias')).getByText('Desativado')).toBeVisible();
-    expect(within(memberRow('Usuário removido')).getByText('Anonimizado')).toBeVisible();
+    expect(within(memberRow('Carla Dias')).getByText('Conta desativada')).toBeVisible();
+    expect(within(memberRow('Usuário removido')).getByText('Conta anonimizada')).toBeVisible();
   });
 
   it('desativar pede confirmação e atualiza o status', async () => {
@@ -83,7 +83,7 @@ describe('/admin/membros', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Desativar' }));
 
     await waitFor(() =>
-      expect(within(memberRow('Bruno Lima')).getByText('Desativado')).toBeVisible(),
+      expect(within(memberRow('Bruno Lima')).getByText('Conta desativada')).toBeVisible(),
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(toastMessages()).toContain('A conta de Bruno Lima foi desativada.');
@@ -156,7 +156,7 @@ describe('/admin/membros', () => {
     expect(message).toHaveAttribute('aria-live', 'polite');
   });
 
-  it('usuário desativado não pode receber link de redefinição', async () => {
+  it('conta desativada não pode receber link de redefinição', async () => {
     const user = userEvent.setup();
     renderApp('/admin/membros');
 
@@ -315,7 +315,7 @@ describe('Anonimizar membro (A5, LGPD)', () => {
     const rows = screen.getAllByText('Usuário removido').map((item) => item.closest('li'));
     expect(rows).toHaveLength(2);
     for (const row of rows) {
-      expect(within(row as HTMLElement).getByText('Anonimizado')).toBeVisible();
+      expect(within(row as HTMLElement).getByText('Conta anonimizada')).toBeVisible();
       expect(
         within(row as HTMLElement).queryByRole('button', { name: /Ações para/ }),
       ).not.toBeInTheDocument();
@@ -338,6 +338,6 @@ describe('Anonimizar membro (A5, LGPD)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Anonimizar conta' }));
 
     await waitFor(() => expect(toastMessages()).toContain('Desative a conta antes de anonimizar.'));
-    expect(within(memberRow('Carla Dias')).getByText('Desativado')).toBeVisible();
+    expect(within(memberRow('Carla Dias')).getByText('Conta desativada')).toBeVisible();
   });
 });

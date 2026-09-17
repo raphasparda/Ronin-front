@@ -10,6 +10,8 @@ Precisa só de **Node.js 24** e **pnpm 10** (`npm i -g pnpm@10`, sem admin). Nã
 2. `pnpm dev`
 3. Abra <http://127.0.0.1:5310>
 
+Use `127.0.0.1`, não `localhost`: a API só aceita mutações com `Origin` igual ao `APP_ORIGIN` (`http://127.0.0.1:5310`) e responderia 403 a tudo vindo de `http://localhost:5310`. Por isso o servidor de desenvolvimento redireciona qualquer acesso a `localhost:5310` para `127.0.0.1:5310` (mesmo caminho e query).
+
 O `pnpm dev` cria o `.env` (se não existir), sobe um PostgreSQL 18 local do próprio projeto na porta 5433 (dados em `.data/postgres`), espera ele responder e então sobe a API (porta 3000) e o web (porta 5310). **Ctrl+C** derruba tudo, inclusive o banco. A primeira execução leva alguns segundos a mais para criar o banco.
 
 Detalhes, problemas comuns e como zerar o banco: [`docs/ops/setup-local.md`](docs/ops/setup-local.md).

@@ -73,11 +73,15 @@ export function placementAmongVisible(
   return before === undefined ? { type: 'start' } : { type: 'after', id: before };
 }
 
+const NO_PENDING: ReadonlySet<string> = new Set();
+
 /**
  * Ao soltar: resolve lista e posição finais e converte em `placement`.
  * `null` quando o card voltou para o mesmo lugar (nada a enviar).
  * `fullOrder` (com filtro ativo) é a ordem completa das listas: `original` e `current` têm só os
  * cards visíveis, e o `placement` usa os vizinhos visíveis.
+ * `pendingIds` são cards ainda sendo criados (id temporário): o servidor não os conhece, então
+ * nunca servem de vizinho no `placement` (a posição exibida continua contando com eles).
  */
 export function resolveCardDrop(
   original: CardOrder,
@@ -85,6 +89,7 @@ export function resolveCardDrop(
   cardId: string,
   target: DragTarget | null,
   fullOrder?: CardOrder,
+  pendingIds: ReadonlySet<string> = NO_PENDING,
 ): CardDrop | null {
   const listId = listOfCard(current, cardId);
   if (!listId) return null;
@@ -98,8 +103,10 @@ export function resolveCardDrop(
   const originalPosition = (original[originalList ?? ''] ?? []).indexOf(cardId) + 1;
   if (originalList === listId && originalPosition === position) return null;
 
+  const known = (list: readonly string[]) => list.filter((id) => !pendingIds.has(id));
+  const knownIds = known(ids);
   const placement = fullOrder
-    ? placementAmongVisible(fullOrder[listId] ?? [], ids, cardId)
-    : placementForPosition(ids, position, cardId);
+    ? placementAmongVisible(known(fullOrder[listId] ?? []), knownIds, cardId)
+    : placementForPosition(knownIds, knownIds.indexOf(cardId) + 1, cardId);
   return { listId, position, placement };
 }

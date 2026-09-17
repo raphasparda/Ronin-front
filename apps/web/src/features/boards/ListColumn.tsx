@@ -13,7 +13,7 @@ import {
   Palette,
   Pencil,
 } from 'lucide-react';
-import { useId } from 'react';
+import { memo, useId, useMemo } from 'react';
 
 import { InlineEdit } from '../../components/ui/InlineEdit';
 import { Menu, MenuItem, MenuSeparator } from '../../components/ui/Menu';
@@ -41,8 +41,9 @@ interface ListColumnProps {
   cardCount: number;
   /** Filtro ativo: o contador vira "3 de 5" e a lista vazia explica o motivo. */
   filtered: boolean;
-  /** Cards exibidos, na ordem (durante o arraste, a ordem provisória). */
-  cards: readonly CardSummary[];
+  /** Ids dos cards exibidos, na ordem (durante o arraste, a ordem provisória). */
+  cardIds: readonly string[];
+  cardsById: ReadonlyMap<string, CardSummary>;
   pendingCardIds: ReadonlySet<string>;
   /** A coluna recebe o card sendo arrastado: contorno na cor da lista. */
   dropTarget: boolean;
@@ -53,13 +54,15 @@ interface ListColumnProps {
   onAddCard: (list: List, title: string) => Promise<boolean>;
 }
 
-export function ListColumn({
+/** Memoizada: arrastar um card re-renderiza só as colunas cuja ordem mudou. Callbacks estáveis. */
+export const ListColumn = memo(function ListColumn({
   list,
   index,
   total,
   cardCount,
   filtered,
-  cards,
+  cardIds,
+  cardsById,
   pendingCardIds,
   dropTarget,
   readOnly,
@@ -69,6 +72,10 @@ export function ListColumn({
   onAddCard,
 }: ListColumnProps) {
   const titleId = useId();
+  const cards = useMemo(
+    () => cardIds.flatMap((id) => cardsById.get(id) ?? []),
+    [cardIds, cardsById],
+  );
   const { setNodeRef: setBodyRef } = useDroppable({
     id: listBodyDroppableId(list.id),
     data: { type: 'list-body', listId: list.id },
@@ -229,4 +236,4 @@ export function ListColumn({
       </div>
     </section>
   );
-}
+});

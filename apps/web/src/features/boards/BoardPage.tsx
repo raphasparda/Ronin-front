@@ -413,7 +413,9 @@ function BoardView() {
         <ConfirmDialog
           open={confirmArchive}
           title={`Arquivar "${payload.board.name}"?`}
-          description={<p>Ele sai da lista de quadros de todos. Você pode restaurar depois.</p>}
+          description={
+            <p>Ele sai da lista de quadros de toda a equipe. Você pode restaurar depois.</p>
+          }
           confirmLabel="Arquivar quadro"
           pending={archiveBoard.isPending}
           pendingLabel="Arquivando…"

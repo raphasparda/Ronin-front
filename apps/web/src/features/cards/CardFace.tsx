@@ -20,16 +20,22 @@ import {
   MoreHorizontal,
   RotateCcw,
 } from 'lucide-react';
-import type { KeyboardEvent, MouseEvent, PointerEventHandler, ReactNode } from 'react';
+import {
+  memo,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEventHandler,
+  type ReactNode,
+} from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { Avatar } from '../../components/ui/Avatar';
-import { DuePill } from '../../components/ui/DuePill';
+import { DueStatePill } from '../../components/ui/DuePill';
 import { LabelPill } from '../../components/ui/LabelPill';
 import { Menu, MenuGroupLabel, MenuItem, MenuSeparator } from '../../components/ui/Menu';
 import { Pill } from '../../components/ui/Pill';
 import { PriorityBadge } from '../../components/ui/PriorityBadge';
-import { describeDue } from '../../lib/due';
+import { describeDue, type DueDisplay } from '../../lib/due';
 import { displayName } from '../users/users-api';
 import { useCardFaceData, type CardFaceData } from './card-face-data';
 import { CARD_LINK_STATE, cardPath } from './cards-api';
@@ -52,7 +58,11 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
  * Nome acessível da face (screens §7.3): título, etiquetas, prioridade, prazo, checklist,
  * comentários e responsáveis, tudo em texto.
  */
-export function cardFaceLabel(card: CardSummary, data: CardFaceData): string {
+export function cardFaceLabel(
+  card: CardSummary,
+  data: CardFaceData,
+  due: DueDisplay | null = describeDue(card, data.timeZone, data.now),
+): string {
   const labels = card.labelIds.flatMap((id) => data.labelsById.get(id)?.name ?? []);
   const people = card.assigneeIds.map((id) => displayName(data.usersById.get(id)));
   return [
@@ -61,7 +71,7 @@ export function cardFaceLabel(card: CardSummary, data: CardFaceData): string {
     card.priority
       ? `Prioridade ${PRIORITY_LABELS[card.priority].toLocaleLowerCase('pt-BR')}`
       : null,
-    describeDue(card, data.timeZone, data.now)?.spoken,
+    due?.spoken,
     card.checklist.total > 0 ? `Checklist ${card.checklist.done} de ${card.checklist.total}` : null,
     card.commentCount > 0 ? plural(card.commentCount, 'comentário', 'comentários') : null,
     people.length > 0
@@ -76,13 +86,19 @@ export function cardFaceLabel(card: CardSummary, data: CardFaceData): string {
 const FACE_CLASS =
   'block rounded-lg border border-l-4 border-border bg-surface p-3 text-text no-underline shadow-sm';
 
-function FaceContent({ card }: { card: CardSummary }) {
-  const data = useCardFaceData();
+function FaceContent({
+  card,
+  data,
+  due,
+}: {
+  card: CardSummary;
+  data: CardFaceData;
+  due: DueDisplay | null;
+}) {
   const labels = card.labelIds.flatMap((id) => data.labelsById.get(id) ?? []);
   const hiddenLabels = labels.slice(MAX_LABELS);
   const people = card.assigneeIds.map((id) => ({ id, name: displayName(data.usersById.get(id)) }));
   const hiddenPeople = people.slice(MAX_AVATARS);
-  const due = describeDue(card, data.timeZone, data.now);
   const { done, total } = card.checklist;
   const hasPills = card.priority !== null || due !== null;
   const hasMeta = total > 0 || card.commentCount > 0 || card.hasDescription || people.length > 0;
@@ -105,7 +121,7 @@ function FaceContent({ card }: { card: CardSummary }) {
       {hasPills && (
         <span className="flex flex-wrap gap-1">
           <PriorityBadge priority={card.priority} srPrefix={false} />
-          <DuePill card={card} timeZone={data.timeZone} now={data.now} />
+          <DueStatePill due={due} />
         </span>
       )}
       {hasMeta && (
@@ -155,13 +171,14 @@ const listMark = (color: PaletteColor) => ({ borderLeftColor: `var(--palette-${c
 
 /** Face do card flutuando sob o ponteiro durante o arraste. */
 export function CardFaceOverlay({ card, color }: { card: CardSummary; color: PaletteColor }) {
+  const data = useCardFaceData();
   return (
     <div
       aria-hidden
       style={listMark(color)}
       className={`drag-overlay w-full rotate-2 cursor-grabbing shadow-lg ${FACE_CLASS}`}
     >
-      <FaceContent card={card} />
+      <FaceContent card={card} data={data} due={describeDue(card, data.timeZone, data.now)} />
     </div>
   );
 }
@@ -180,7 +197,17 @@ interface CardFaceProps {
   actions: CardFaceActions;
 }
 
-export function CardFace({ card, color, readOnly, pending, actions }: CardFaceProps) {
+/**
+ * Memoizada: o quadro re-renderiza a cada arraste e mutação otimista; só as faces cujas props
+ * mudaram (card, cor, estado) renderizam de novo. `actions` precisa ser estável.
+ */
+export const CardFace = memo(function CardFace({
+  card,
+  color,
+  readOnly,
+  pending,
+  actions,
+}: CardFaceProps) {
   const navigate = useNavigate();
   const data = useCardFaceData();
   const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({
@@ -201,6 +228,7 @@ export function CardFace({ card, color, readOnly, pending, actions }: CardFacePr
     );
   }
 
+  const due = describeDue(card, data.timeZone, data.now);
   const to = { pathname: cardPath(card.boardId, card.id), search: data.search };
 
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -282,7 +310,7 @@ export function CardFace({ card, color, readOnly, pending, actions }: CardFacePr
           <Link
             to={to}
             state={CARD_LINK_STATE}
-            aria-label={cardFaceLabel(card, data)}
+            aria-label={cardFaceLabel(card, data, due)}
             aria-keyshortcuts={readOnly ? undefined : 'M'}
             onPointerDown={listeners?.onPointerDown as PointerEventHandler | undefined}
             onClick={onClick}
@@ -292,11 +320,11 @@ export function CardFace({ card, color, readOnly, pending, actions }: CardFacePr
               readOnly ? '' : 'pr-10'
             } ${FACE_CLASS}`}
           >
-            <FaceContent card={card} />
+            <FaceContent card={card} data={data} due={due} />
           </Link>
           {menu}
         </>
       )}
     </div>
   );
-}
+});

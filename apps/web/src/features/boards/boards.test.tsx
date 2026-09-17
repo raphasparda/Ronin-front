@@ -255,7 +255,7 @@ describe('Listas', () => {
       name: 'Marcar "Fazendo" como lista de conclusão?',
     });
     expect(dialog).toHaveTextContent(
-      'Os 2 cards abertos desta lista serão marcados como concluídos, com você como autor da conclusão.',
+      'Os 2 cards abertos desta lista serão marcados como concluídos, com a conclusão registrada em seu nome.',
     );
     expect(dialog).toHaveTextContent('A lista Concluído deixa de ser a lista de conclusão.');
     expect(boardRequests('lists/update')).toEqual([]);

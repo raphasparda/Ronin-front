@@ -25,7 +25,10 @@ export function safeNextPath(raw: string | null | undefined): string {
   }
   if (url.origin !== PLACEHOLDER_ORIGIN || AUTH_PATHS.has(url.pathname)) return '/';
 
-  return `${url.pathname}${url.search}${url.hash}`;
+  // A normalização pode recriar um caminho protocol-relative: `/..//evil.com` vira `//evil.com`.
+  const out = `${url.pathname}${url.search}${url.hash}`;
+  if (out.startsWith('//') || hasUnsafeCharacters(out)) return '/';
+  return out;
 }
 
 /** `/login?next=<rota atual>` (sem `next` quando a rota atual é `/`). */

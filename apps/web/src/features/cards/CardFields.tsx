@@ -153,7 +153,7 @@ export function CardAssigneesField({ card, readOnly, announce }: FieldProps) {
                 <span className="min-w-0 flex-1 truncate">
                   {name}
                   {user?.status === 'deactivated' && !user.anonymized && (
-                    <span className="text-muted"> (desativado)</span>
+                    <span className="text-muted"> (conta desativada)</span>
                   )}
                 </span>
                 {!readOnly && (

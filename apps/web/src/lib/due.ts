@@ -1,5 +1,7 @@
 import { getDueState, type CardStatus, type DueInput, type DueState } from '@kanban/shared';
 
+import { dateTimeFormat } from './intl';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 interface ZonedParts {
@@ -13,7 +15,7 @@ interface ZonedParts {
 
 function zonedParts(ms: number, timeZone: string | undefined): ZonedParts {
   const values: Record<string, number> = {};
-  const formatter = new Intl.DateTimeFormat('en-US', {
+  const formatter = dateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',
     month: 'numeric',
@@ -88,7 +90,7 @@ type MonthStyle = 'short' | 'long';
 
 function formatDate(ms: number, timeZone: string | undefined, now: Date, month: MonthStyle) {
   const parts: Record<string, string> = {};
-  const formatter = new Intl.DateTimeFormat('pt-BR', {
+  const formatter = dateTimeFormat('pt-BR', {
     day: 'numeric',
     month,
     year: 'numeric',
@@ -168,7 +170,7 @@ export function describeDue(
 export function timeZoneDisplayName(timeZone: string | undefined): string {
   if (!timeZone) return '';
   try {
-    const name = new Intl.DateTimeFormat('pt-BR', { timeZone, timeZoneName: 'longGeneric' })
+    const name = dateTimeFormat('pt-BR', { timeZone, timeZoneName: 'longGeneric' })
       .formatToParts(new Date())
       .find((part) => part.type === 'timeZoneName')?.value;
     return name ?? timeZone;

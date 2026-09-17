@@ -34,7 +34,7 @@ describe('/convite', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Quadros' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
-    expect(getToasts().map((item) => item.message)).toContain('Bem-vindo à equipe, Maria.');
+    expect(getToasts().map((item) => item.message)).toContain('Boas-vindas à equipe, Maria.');
     expect(requestsTo('invites/accept')[0]?.body).toEqual({
       token: TOKEN,
       name: 'Maria Clara',

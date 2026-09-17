@@ -37,7 +37,7 @@ const FIELD_MESSAGES: FieldMessages<keyof ResetFormValues> = {
 
 export const RESET_MESSAGES = {
   invalidTitle: 'Este link não vale mais',
-  invalidDescription: 'Peça um novo ao administrador da equipe.',
+  invalidDescription: 'Peça um novo a quem administra a equipe.',
 } as const;
 
 const resolver = schemaResolver(completePasswordResetRequestSchema, FIELD_MESSAGES);

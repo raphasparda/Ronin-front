@@ -31,7 +31,7 @@ export function AdminLayout() {
           icon={ShieldAlert}
           headingLevel="h1"
           title="Área de administração"
-          description={`${MESSAGES.forbidden} Só administradores acessam esta área.`}
+          description={`${MESSAGES.forbidden} Só Admins acessam esta área.`}
           action={<Link to="/">Voltar para Quadros</Link>}
         />
       </div>

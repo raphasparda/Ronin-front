@@ -116,8 +116,14 @@ describe('Meus cards (/meus-cards)', () => {
     expect(router.state.location.pathname).toBe(`/b/${BOARD_ID}/c/${urgent.id}`);
   });
 
-  it('concluir pelo teclado tira a linha, move o foco e "Desfazer" reabre', async () => {
-    addCard('Primeiro', { dueAt: null, priority: 'high', listId: LIST_IDS.doing });
+  it('concluir pelo teclado tira a linha, move o foco e "Desfazer" devolve o card ao lugar', async () => {
+    // Entre "Revisar orçamento" (a0) e "Publicar campanha" (a1) em Fazendo.
+    const primeiro = addCard('Primeiro', {
+      dueAt: null,
+      priority: 'high',
+      listId: LIST_IDS.doing,
+      position: 'a0V',
+    });
     addCard('Segundo', { dueAt: null, priority: 'low' });
     const user = userEvent.setup();
     renderApp('/meus-cards');
@@ -137,9 +143,14 @@ describe('Meus cards (/meus-cards)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Desfazer' }));
     await waitFor(() =>
-      expect(toastMessages()).toContain('Card reaberto e movido para o topo de A fazer.'),
+      expect(toastMessages()).toContain('Conclusão desfeita. O card voltou para Fazendo.'),
     );
     expect(boardRequests('cards/reopen')).toHaveLength(1);
+    expect(boardRequests('cards/move').map((request) => request.body)).toEqual([
+      { toListId: LIST_IDS.doing, placement: { type: 'after', id: CARD_IDS.budget } },
+    ]);
+    const restored = boardDb.cards.find((card) => card.id === primeiro.id);
+    expect(restored).toMatchObject({ listId: LIST_IDS.doing, status: 'open' });
     expect(await screen.findByRole('link', { name: /^Primeiro/ })).toBeVisible();
   });
 

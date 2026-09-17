@@ -30,6 +30,7 @@ export const CARD_MESSAGES = {
   completedMoved: (listName: string) => `Card concluído e movido para ${listName}.`,
   reopened: 'Card reaberto.',
   reopenedMoved: (listName: string) => `Card reaberto e movido para o topo de ${listName}.`,
+  completionUndone: (listName: string) => `Conclusão desfeita. O card voltou para ${listName}.`,
   reopenedStayed: (listName: string) =>
     `Card reaberto. Ele continua em ${listName} porque o quadro não tem outra lista.`,
   completeFailed: 'Não foi possível concluir o card. Tente de novo.',

@@ -19,6 +19,8 @@ import {
   cardsInList,
   keyBetween,
   mergeSummary,
+  restoreCardPlacement,
+  restoreDetailPlacement,
   setCardDetail,
 } from './cards-api';
 
@@ -29,10 +31,23 @@ export interface CompletionVariables {
   action: CompletionAction;
 }
 
+/** Estado do card antes da conclusão otimista (só dele: o rollback não desfaz a fila). */
 interface CompletionSnapshot {
-  payload: BoardPayload | undefined;
+  card: CardSummary | undefined;
   detail: CardDetail | undefined;
-  myCards: MyCard[] | undefined;
+  /** O card em Meus cards e a posição dele, se estava lá. */
+  myCard: { card: MyCard; index: number } | undefined;
+}
+
+/** Devolve o card a Meus cards na posição anterior, se ele saiu; o resto da lista fica. */
+export function restoreMyCard(
+  cards: MyCard[],
+  previous: { card: MyCard; index: number },
+): MyCard[] {
+  if (cards.some((item) => item.id === previous.card.id)) return cards;
+  const next = [...cards];
+  next.splice(Math.min(previous.index, next.length), 0, previous.card);
+  return next;
 }
 
 /**
@@ -82,10 +97,17 @@ export function useCardCompletion() {
         queryClient.cancelQueries({ queryKey: cardQueryKey(card.id) }),
         queryClient.cancelQueries({ queryKey: myCardsQueryKey }),
       ]);
+      const myCards = queryClient.getQueryData<MyCard[]>(myCardsQueryKey) ?? [];
+      const myCardIndex = myCards.findIndex((item) => item.id === card.id);
       const snapshot: CompletionSnapshot = {
-        payload: queryClient.getQueryData<BoardPayload>(boardQueryKey(card.boardId)),
+        card: queryClient
+          .getQueryData<BoardPayload>(boardQueryKey(card.boardId))
+          ?.cards.find((item) => item.id === card.id),
         detail: queryClient.getQueryData<CardDetail>(cardQueryKey(card.id)),
-        myCards: queryClient.getQueryData<MyCard[]>(myCardsQueryKey),
+        myCard:
+          myCardIndex === -1
+            ? undefined
+            : { card: myCards[myCardIndex] as MyCard, index: myCardIndex },
       };
       if (action === 'complete') {
         setBoardData(queryClient, card.boardId, (payload) => completeInPayload(payload, card.id));
@@ -118,10 +140,16 @@ export function useCardCompletion() {
       }
     },
     onError: (_error, { card }, snapshot) => {
-      if (!snapshot) return;
-      if (snapshot.payload) queryClient.setQueryData(boardQueryKey(card.boardId), snapshot.payload);
-      if (snapshot.detail) queryClient.setQueryData(cardQueryKey(card.id), snapshot.detail);
-      if (snapshot.myCards) queryClient.setQueryData(myCardsQueryKey, snapshot.myCards);
+      const { card: previous, detail, myCard } = snapshot ?? {};
+      if (previous) {
+        setBoardData(queryClient, card.boardId, (payload) =>
+          restoreCardPlacement(payload, previous),
+        );
+      }
+      if (detail) {
+        setCardDetail(queryClient, card.id, (current) => restoreDetailPlacement(current, detail));
+      }
+      if (myCard) setMyCards(queryClient, (cards) => restoreMyCard(cards, myCard));
     },
     onSettled: (_data, _error, { card }) =>
       Promise.all([
