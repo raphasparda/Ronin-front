@@ -73,3 +73,8 @@ export function useLogout() {
     mutationFn: () => api.post('/api/auth/logout'),
   });
 }
+
+/** Usuário da sessão dentro das rotas logadas (o `RequireAuth` garante o cache preenchido). */
+export function useSessionUser() {
+  return useSession({ enabled: false }).data?.user ?? null;
+}

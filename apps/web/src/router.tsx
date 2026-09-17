@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from 'react-router';
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './features/auth/LoginPage';
@@ -26,6 +26,16 @@ export const routes: RouteObject[] = [
     lazy: async () => ({ Component: (await import('./features/auth/SetupPage')).SetupPage }),
   },
   {
+    path: '/convite',
+    lazy: async () => ({ Component: (await import('./features/auth/InvitePage')).InvitePage }),
+  },
+  {
+    path: '/redefinir-senha',
+    lazy: async () => ({
+      Component: (await import('./features/auth/ResetPasswordPage')).ResetPasswordPage,
+    }),
+  },
+  {
     Component: RequireAuth,
     children: [
       {
@@ -34,7 +44,62 @@ export const routes: RouteObject[] = [
         children: [
           {
             index: true,
-            lazy: async () => ({ Component: (await import('./features/home/HomePage')).HomePage }),
+            lazy: async () => ({
+              Component: (await import('./features/boards/BoardsPage')).BoardsPage,
+            }),
+          },
+          {
+            path: 'quadros/arquivados',
+            lazy: async () => ({
+              Component: (await import('./features/boards/ArchivedBoardsPage')).ArchivedBoardsPage,
+            }),
+          },
+          {
+            path: 'b/:boardId',
+            lazy: async () => ({
+              Component: (await import('./features/boards/BoardPage')).BoardPage,
+            }),
+            children: [
+              {
+                path: 'c/:cardId',
+                lazy: async () => ({
+                  Component: (await import('./features/cards/CardDetailRoute')).CardDetailRoute,
+                }),
+              },
+            ],
+          },
+          {
+            path: 'perfil',
+            lazy: async () => ({
+              Component: (await import('./features/profile/ProfilePage')).ProfilePage,
+            }),
+          },
+          {
+            path: 'admin',
+            lazy: async () => ({
+              Component: (await import('./features/admin/AdminLayout')).AdminLayout,
+            }),
+            children: [
+              { index: true, element: <Navigate to="/admin/membros" replace /> },
+              {
+                path: 'membros',
+                lazy: async () => ({
+                  Component: (await import('./features/admin/MembersPage')).MembersPage,
+                }),
+              },
+              {
+                path: 'convites',
+                lazy: async () => ({
+                  Component: (await import('./features/admin/InvitesPage')).InvitesPage,
+                }),
+              },
+              {
+                path: 'workspace',
+                lazy: async () => ({
+                  Component: (await import('./features/admin/WorkspacePage')).WorkspacePage,
+                }),
+              },
+            ],
           },
           ...devRoutes,
           { path: '*', Component: NotFoundPage },

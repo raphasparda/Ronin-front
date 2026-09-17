@@ -9,7 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { FormAlert } from '../../components/ui/FormAlert';
 import { Input } from '../../components/ui/Input';
 import { PasswordInput } from '../../components/ui/PasswordInput';
-import { Select, type SelectOption } from '../../components/ui/Select';
+import { Select } from '../../components/ui/Select';
 import { toast } from '../../components/ui/toast-store';
 import { isApiError } from '../../lib/api-client';
 import { formatWait } from '../../lib/format-wait';
@@ -20,6 +20,7 @@ import {
   type FieldMessages,
 } from '../../lib/form-errors';
 import { MESSAGES } from '../../lib/query-client';
+import { getTimezoneOptions } from '../../lib/timezones';
 import { setupStatusQueryKey, useSetup, useSetupStatus } from './auth-api';
 import { AuthLayout } from './AuthLayout';
 import { BootError, BootLoading } from './BootScreen';
@@ -82,19 +83,6 @@ export const SETUP_MESSAGES = {
 } as const;
 
 const resolver = schemaResolver(setupFormSchema, FIELD_MESSAGES);
-
-let timezoneOptions: SelectOption[] | undefined;
-
-function getTimezoneOptions(): SelectOption[] {
-  if (!timezoneOptions) {
-    const zones = new Set(Intl.supportedValuesOf('timeZone'));
-    zones.add(DEFAULT_TIMEZONE);
-    timezoneOptions = [...zones]
-      .sort((a, b) => a.localeCompare(b))
-      .map((zone) => ({ value: zone, label: zone.replaceAll('_', ' ') }));
-  }
-  return timezoneOptions;
-}
 
 export function SetupPage() {
   const setupStatus = useSetupStatus();

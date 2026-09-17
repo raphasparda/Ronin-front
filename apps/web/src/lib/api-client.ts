@@ -171,6 +171,11 @@ export const api = {
     body?: unknown,
     options?: Omit<RequestOptions<TSchema>, 'method' | 'body'>,
   ) => apiRequest(path, { ...options, method: 'POST', body }),
+  put: <TSchema extends z.ZodType | undefined = undefined>(
+    path: string,
+    body?: unknown,
+    options?: Omit<RequestOptions<TSchema>, 'method' | 'body'>,
+  ) => apiRequest(path, { ...options, method: 'PUT', body }),
   patch: <TSchema extends z.ZodType | undefined = undefined>(
     path: string,
     body?: unknown,

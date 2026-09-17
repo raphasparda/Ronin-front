@@ -89,10 +89,13 @@ describe('menu do usuário', () => {
     button.focus();
     await user.keyboard('{Enter}');
 
-    const signOut = screen.getByRole('menuitem', { name: 'Sair' });
+    const profile = screen.getByRole('menuitem', { name: 'Meu perfil' });
     expect(button).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText(sessionFixture.user.email)).toBeVisible();
-    await waitFor(() => expect(signOut).toHaveFocus());
+    await waitFor(() => expect(profile).toHaveFocus());
+
+    await user.keyboard('{End}');
+    expect(screen.getByRole('menuitem', { name: 'Sair' })).toHaveFocus();
 
     await user.keyboard('{Escape}');
 

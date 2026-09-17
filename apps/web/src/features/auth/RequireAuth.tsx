@@ -7,6 +7,8 @@ import { BootError, BootLoading } from './BootScreen';
 
 export interface LoginLocationState {
   sessionExpired?: boolean;
+  /** Veio de `/redefinir-senha` com sucesso. */
+  passwordReset?: boolean;
 }
 
 /**

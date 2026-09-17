@@ -40,6 +40,7 @@ const FIELD_MESSAGES: FieldMessages<keyof LoginFormValues> = {
 export const LOGIN_MESSAGES = {
   invalidCredentials: 'E-mail ou senha incorretos.',
   sessionExpired: 'Sua sessão expirou. Entre de novo para continuar.',
+  passwordReset: 'Senha alterada. Entre com a nova senha.',
   tooManyAttempts: (seconds: number | null) =>
     seconds === null
       ? 'Muitas tentativas seguidas. Tente de novo em instantes.'
@@ -161,6 +162,9 @@ export function LoginPage() {
       <title>Entrar · Ronin</title>
       {locationState?.sessionExpired && !formError && (
         <Alert tone="info">{LOGIN_MESSAGES.sessionExpired}</Alert>
+      )}
+      {locationState?.passwordReset && !formError && (
+        <Alert tone="success">{LOGIN_MESSAGES.passwordReset}</Alert>
       )}
       <form noValidate onSubmit={(event) => void onSubmit(event)}>
         <FormAlert
