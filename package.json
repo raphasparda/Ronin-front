@@ -1,0 +1,38 @@
+{
+  "name": "kanban",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:app": "pnpm --recursive --parallel --if-present --filter @kanban/api --filter @kanban/web run dev",
+    "db:dev": "node scripts/db-dev.mjs",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @kanban/api run db:generate",
+    "db:migrate": "pnpm --filter @kanban/api run db:migrate",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "typecheck": "pnpm --recursive --if-present run typecheck",
+    "test": "pnpm --recursive --if-present --workspace-concurrency=1 run test",
+    "test:e2e": "pnpm --filter @kanban/web run test:e2e",
+    "build": "pnpm --recursive --if-present run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "embedded-postgres": "18.4.0-beta.17",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "pg": "^8.23.0",
+    "prettier": "^3.9.7",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.70.0"
+  }
+}

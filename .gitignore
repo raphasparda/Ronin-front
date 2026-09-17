@@ -1,0 +1,25 @@
+# Dependências e build
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Ambiente (nunca commitar segredos)
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+# PostgreSQL local de dev (pnpm db:dev / pnpm dev)
+.data/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
+# Logs e SO
+*.log
+.DS_Store
+Thumbs.db
+
