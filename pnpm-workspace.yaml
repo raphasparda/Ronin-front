@@ -1,13 +1,6 @@
-packages:
-  - apps/*
-  - packages/*
+# Repositório de um pacote só; este arquivo existe para as configurações do pnpm 10.
+# O @raphasparda/ronin-shared vem do repositório irmão (link:../ronin-api/packages/shared) ou do GitHub Packages.
 
 # pnpm 10 bloqueia scripts de instalação por padrão; libere aqui só o necessário.
 onlyBuiltDependencies:
   - esbuild
-  # Binários do PostgreSQL local de dev (pnpm db:dev): o postinstall recria symlinks no Linux/macOS.
-  - '@embedded-postgres/darwin-arm64'
-  - '@embedded-postgres/darwin-x64'
-  - '@embedded-postgres/linux-arm64'
-  - '@embedded-postgres/linux-x64'
-  - '@embedded-postgres/windows-x64'

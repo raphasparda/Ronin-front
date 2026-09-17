@@ -8,6 +8,13 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). O
 
 Entrega das Fatias 0 a 9 do MVP, na branch `feat/mvp-fatias-2-9`. A Fatia 10 (produção em VPS, backup e revisão final) ainda está pendente: veja [`docs/ops/known-issues.md`](docs/ops/known-issues.md).
 
+### Alterado
+
+- Monorepo dividido em dois repositórios, com histórico preservado: **ronin-web** (este, `raphasparda/Ronin-front`: SPA na raiz, E2E em `e2e/`, docs de design) e **ronin-api** (`raphasparda/Ronin-End`: API, `@raphasparda/ronin-shared` (antes `@kanban/shared`), banco local de dev, docs de produto, arquitetura e operação; ADR 0014 de lá). As entradas abaixo são do monorepo e incluem itens da API.
+- `@raphasparda/ronin-shared` ligado por `link:../ronin-api/packages/shared` (ou pela versão publicada no GitHub Packages); fixtures de teste pelo subpath `@raphasparda/ronin-shared/test-fixtures`.
+- `pnpm test:e2e` sobe a API a partir do ronin-api (`RONIN_API_DIR`, padrão `../ronin-api`), mantendo o banco isolado `kanban_e2e` e as portas 3100/5320.
+- CI faz checkout de `raphasparda/Ronin-End` (variável opcional `RONIN_API_REPOSITORY`, segredo `RONIN_API_TOKEN` se privado).
+
 ### Adicionado
 
 #### Base e ambiente de desenvolvimento

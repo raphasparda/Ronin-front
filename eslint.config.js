@@ -13,7 +13,6 @@ export default tseslint.config(
       '**/coverage/**',
       '**/playwright-report/**',
       '**/test-results/**',
-      'apps/api/drizzle/**',
     ],
   },
   js.configs.recommended,
@@ -38,12 +37,12 @@ export default tseslint.config(
     },
   },
   {
-    // apps/web: código de navegador (React).
-    files: ['apps/web/src/**/*.{ts,tsx}', 'apps/web/public/**/*.js'],
+    // Código de navegador (React).
+    files: ['src/**/*.{ts,tsx}', 'public/**/*.js'],
     languageOptions: { globals: { ...globals.browser } },
   },
   {
-    files: ['apps/web/src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}'],
     ...reactHooks.configs.flat['recommended-latest'],
   },
   {

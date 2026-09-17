@@ -3,7 +3,7 @@
 > Autor: Raphael Sparda. Status: **v4 (2026-09-16)**.
 > v4: pedido do cliente — tokens de tema derivados da logo (`Ronin Logo.png`): destaque **vermelho-sangue `#E0000E`** nos dois temas; tema escuro com o **preto** da logo; neutros sem tom azulado. Paleta de listas/etiquetas, prioridades e estados (1.2–1.4) inalterada.
 > Alinhado a `docs/product/scope.md` v2, `docs/architecture/overview.md` v1.2 (§9) e `docs/architecture/api.md` v1.2, que são a fonte da verdade para chaves, nomes de token e rotas.
-> Implementação: React + TypeScript + Vite + **Tailwind 4**. Tokens em `apps/web/src/styles/globals.css`.
+> Implementação: React + TypeScript + Vite + **Tailwind 4**. Tokens em `src/styles/globals.css`.
 
 ## 0. Princípios
 
@@ -195,7 +195,7 @@ A sombra nunca é o único separador. Cards e popovers têm também borda `borde
 | **Erro de campo** | Borda 2px `--color-danger`, ícone e mensagem abaixo, `aria-invalid` + `aria-describedby`. |
 | **Arrastando** | Origem: espaço `bg-surface-sunken` com borda tracejada `border-strong`. Card flutuante: `shadow-lg` + `rotate(2deg)` (sem rotação com reduced-motion). Coluna de destino: contorno de 2px `var(--palette-<cor>-border)`. |
 
-## 6. Componentes base (`apps/web/src/components/ui/`)
+## 6. Componentes base (`src/components/ui/`)
 
 | Componente | Especificação | Acessibilidade |
 | ---- | ---- | ---- |
@@ -221,7 +221,7 @@ A sombra nunca é o único separador. Cards e popovers têm também borda `borde
 
 Ícones: `lucide-react`, 16px (20px no cabeçalho), traço 2, `currentColor`, com `aria-hidden` quando são decorativos.
 
-## 7. Bloco CSS para `apps/web/src/styles/globals.css`
+## 7. Bloco CSS para `src/styles/globals.css`
 
 ```css
 @import "tailwindcss";
@@ -426,7 +426,7 @@ A sombra nunca é o único separador. Cards e popovers têm também borda `borde
 ### 7.1 Tema
 
 - Atributo `data-theme="light" | "dark"` no `<html>`. **Padrão: claro** (S5).
-- `apps/web/public/theme-init.js`, carregado **síncrono** no `<head>` (script externo, por causa da CSP):
+- `public/theme-init.js`, carregado **síncrono** no `<head>` (script externo, por causa da CSP):
 
 ```js
 (function () {
@@ -440,7 +440,7 @@ A sombra nunca é o único separador. Cards e popovers têm também borda `borde
 
 ### 7.2 Proteção contra regressão (CI)
 
-Um grep em `apps/web/src/**/*.tsx` que falha ao encontrar:
+Um grep em `src/**/*.tsx` que falha ao encontrar:
 - `(bg|text|border|fill|stroke|outline|ring|shadow)-\[#`;
 - hex em `style=`;
 - paleta padrão `-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b`;

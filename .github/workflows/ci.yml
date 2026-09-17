@@ -1,5 +1,14 @@
-# CI do Ronin: lint, typecheck, testes (com PostgreSQL real) e build; E2E em job separado.
-# Detalhes, variáveis e como reproduzir localmente: docs/ops/ci.md.
+# CI do ronin-web: lint, typecheck, testes de componentes e build; E2E (Playwright) em job separado,
+# subindo a API do repositório ronin-api com um PostgreSQL de serviço.
+# Detalhes, variáveis, segredos e como reproduzir localmente: docs/ops/ci.md.
+#
+# Os dois jobs fazem checkout do ronin-api ao lado deste repositório (ronin-web/ e ronin-api/ no
+# workspace), porque o @raphasparda/ronin-shared vem de `link:../ronin-api/packages/shared`.
+# Configuração no GitHub (Settings -> Secrets and variables -> Actions):
+#   - variável RONIN_API_REPOSITORY (opcional): repositório da API; padrão: raphasparda/Ronin-End
+#   - variável RONIN_API_REF (opcional): branch/tag do ronin-api; padrão: main
+#   - segredo RONIN_API_TOKEN (obrigatório se o ronin-api for privado): fine-grained PAT com
+#     "Contents: Read-only" só no Ronin-End. Sem ele, usa o GITHUB_TOKEN (serve só se for público).
 name: CI
 
 on:
@@ -16,14 +25,13 @@ permissions:
   contents: read
 
 env:
-  # Nunca subir o PostgreSQL embutido (scripts/dev-db/postgres.mjs): o CI usa só o serviço abaixo.
-  DEV_DB_EXTERNAL_ONLY: 'true'
-  # Serviço postgres:18-alpine publicado na 5432 do runner. Credenciais descartáveis, só do CI.
-  DATABASE_URL: postgres://kanban:kanban@127.0.0.1:5432/kanban
-  TEST_DATABASE_URL: postgres://kanban:kanban@127.0.0.1:5432/kanban_test
-  E2E_DATABASE_URL: postgres://kanban:kanban@127.0.0.1:5432/kanban_e2e
-  APP_ORIGIN: http://127.0.0.1:5310
-  LOG_LEVEL: warn
+  RONIN_API_REPOSITORY: ${{ vars.RONIN_API_REPOSITORY || 'raphasparda/Ronin-End' }}
+  RONIN_API_REF: ${{ vars.RONIN_API_REF || 'main' }}
+  RONIN_API_DIR: ${{ github.workspace }}/ronin-api
+
+defaults:
+  run:
+    working-directory: ronin-web
 
 jobs:
   checks:
@@ -31,41 +39,43 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: kanban
-          POSTGRES_PASSWORD: kanban
-          POSTGRES_DB: kanban
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U kanban -d kanban"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
     steps:
-      - name: Checkout
+      - name: Checkout (ronin-web)
         uses: actions/checkout@v7
         with:
+          path: ronin-web
+          persist-credentials: false
+
+      - name: Checkout (ronin-api, fonte do @raphasparda/ronin-shared)
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ env.RONIN_API_REPOSITORY }}
+          ref: ${{ env.RONIN_API_REF }}
+          token: ${{ secrets.RONIN_API_TOKEN || github.token }}
+          path: ronin-api
           persist-credentials: false
 
       # Sem `version`: usa o `packageManager` do package.json (pnpm@10.x).
       - name: Instalar pnpm
         uses: pnpm/action-setup@v6
+        with:
+          package_json_file: ronin-web/package.json
 
       - name: Instalar Node.js (.nvmrc) com cache do store do pnpm
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc
+          node-version-file: ronin-web/.nvmrc
           cache: pnpm
+          cache-dependency-path: |
+            ronin-web/pnpm-lock.yaml
+            ronin-api/pnpm-lock.yaml
 
-      - name: Criar banco de testes (kanban_test)
-        run: docker exec "${{ job.services.postgres.id }}" psql -U kanban -d kanban -v ON_ERROR_STOP=1 -c "CREATE DATABASE kanban_test OWNER kanban"
+      # O zod usado pela fonte do shared é resolvido a partir de ronin-api/node_modules.
+      - name: Instalar dependências (ronin-api)
+        working-directory: ronin-api
+        run: pnpm install --frozen-lockfile
 
-      - name: Instalar dependências
+      - name: Instalar dependências (ronin-web)
         run: pnpm install --frozen-lockfile
 
       - name: Lint
@@ -86,6 +96,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    env:
+      # Nunca subir o PostgreSQL embutido do ronin-api: o CI usa só o serviço abaixo.
+      DEV_DB_EXTERNAL_ONLY: 'true'
+      # Serviço postgres:18-alpine publicado na 5432 do runner. Credenciais descartáveis, só do CI.
+      DATABASE_URL: postgres://kanban:kanban@127.0.0.1:5432/kanban
+      E2E_DATABASE_URL: postgres://kanban:kanban@127.0.0.1:5432/kanban_e2e
+      APP_ORIGIN: http://127.0.0.1:5310
+      LOG_LEVEL: warn
+
     services:
       postgres:
         image: postgres:18-alpine
@@ -102,31 +121,50 @@ jobs:
           --health-retries 20
 
     steps:
-      - name: Checkout
+      - name: Checkout (ronin-web)
         uses: actions/checkout@v7
         with:
+          path: ronin-web
+          persist-credentials: false
+
+      - name: Checkout (ronin-api)
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ env.RONIN_API_REPOSITORY }}
+          ref: ${{ env.RONIN_API_REF }}
+          token: ${{ secrets.RONIN_API_TOKEN || github.token }}
+          path: ronin-api
           persist-credentials: false
 
       - name: Instalar pnpm
         uses: pnpm/action-setup@v6
+        with:
+          package_json_file: ronin-web/package.json
 
       - name: Instalar Node.js (.nvmrc) com cache do store do pnpm
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc
+          node-version-file: ronin-web/.nvmrc
           cache: pnpm
+          cache-dependency-path: |
+            ronin-web/pnpm-lock.yaml
+            ronin-api/pnpm-lock.yaml
 
       - name: Criar banco E2E (kanban_e2e)
         run: docker exec "${{ job.services.postgres.id }}" psql -U kanban -d kanban -v ON_ERROR_STOP=1 -c "CREATE DATABASE kanban_e2e OWNER kanban"
 
-      - name: Instalar dependências
+      - name: Instalar dependências (ronin-api)
+        working-directory: ronin-api
+        run: pnpm install --frozen-lockfile
+
+      - name: Instalar dependências (ronin-web)
         run: pnpm install --frozen-lockfile
 
       - name: Instalar Chromium do Playwright
-        working-directory: apps/web
         run: pnpm exec playwright install --with-deps chromium
 
-      # e2e/run.mjs aplica as migrations em kanban_e2e e roda o Playwright (API 3100, web 5320).
+      # e2e/run.mjs aplica as migrations do ronin-api em kanban_e2e e roda o Playwright
+      # (API do ronin-api na 3100, web na 5320).
       - name: E2E
         run: pnpm test:e2e
 
@@ -136,7 +174,7 @@ jobs:
         with:
           name: playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            apps/web/playwright-report
-            apps/web/test-results
+            ronin-web/playwright-report
+            ronin-web/test-results
           retention-days: 7
           if-no-files-found: ignore

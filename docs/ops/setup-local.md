@@ -1,58 +1,58 @@
 # Setup local (desenvolvimento)
 
-Resumo: `pnpm install` e `pnpm dev`, depois abrir <http://127.0.0.1:5310>. O `pnpm dev` sobe o banco, aplica as migrations pendentes e só então sobe API e web; se a migration falhar, API e web não sobem. Este documento explica o que acontece por baixo e como resolver problemas.
+Resumo: com o **ronin-api** clonado ao lado, instalado e rodando (`pnpm dev` lá), rode aqui `pnpm install` e `pnpm dev` e abra <http://127.0.0.1:5310>.
+
+## Pastas lado a lado
+
+```powershell
+git clone https://github.com/raphasparda/Ronin-End.git ronin-api
+git clone https://github.com/raphasparda/Ronin-front.git ronin-web
+```
+
+```text
+<pasta>/
+├─ ronin-api/   pnpm install  →  pnpm dev   (Postgres 5433, migrations, API 3000)
+└─ ronin-web/   pnpm install  →  pnpm dev   (web 5310, proxy /api → 127.0.0.1:3000)
+```
+
+- O `@raphasparda/ronin-shared` vem de `link:../ronin-api/packages/shared` (symlink para a fonte TS). Instale o ronin-api **antes**: o `zod` usado pela fonte do shared é resolvido em `ronin-api/node_modules`.
+- O banco, as migrations e a configuração da API (`.env` com `DATABASE_URL`, `PORT`, `APP_ORIGIN`) ficam no ronin-api (`docs/ops/setup-local.md` de lá).
 
 ## Portas
 
-| Serviço    | Endereço          | Observação                                                   |
-| ---------- | ----------------- | ------------------------------------------------------------ |
-| PostgreSQL | `127.0.0.1:5433`  | 5432 fica livre para um Postgres nativo                      |
-| API        | `127.0.0.1:3000`  | `PORT` no `.env`                                             |
-| Web (Vite) | `127.0.0.1:5310`  | fixa (`strictPort`); a 5173 é usada por outro projeto local  |
+| Serviço    | Endereço         | Observação                                                  |
+| ---------- | ---------------- | ----------------------------------------------------------- |
+| Web (Vite) | `127.0.0.1:5310` | fixa (`strictPort`); a 5173 é usada por outro projeto local |
+| API        | `127.0.0.1:3000` | ronin-api (`PORT` do `.env` de lá)                          |
+| PostgreSQL | `127.0.0.1:5433` | ronin-api                                                   |
+| API (E2E)  | `127.0.0.1:3100` | só durante `pnpm test:e2e`                                  |
+| Web (E2E)  | `127.0.0.1:5320` | só durante `pnpm test:e2e`                                  |
 
-O Vite faz proxy de `/api` para a API, então o navegador usa só a origem `http://127.0.0.1:5310` (igual ao `APP_ORIGIN`).
+## Como o `vite.config.ts` se liga à API
 
-## Como o banco local funciona
+- **Proxy** `/api` → `API_PROXY_TARGET` (ambiente ou `.env` daqui) ou `http://127.0.0.1:<PORT>`, com `PORT` do ambiente ou do `.env` do ronin-api (padrão 3000). O navegador usa só a origem `http://127.0.0.1:5310`, igual ao `APP_ORIGIN` da API.
+- **`localhost` → `127.0.0.1`**: quem abre `http://localhost:5310` é redirecionado (307) para o mesmo caminho em `127.0.0.1:5310`; sem isso, toda mutação tomaria 403 da checagem de `Origin`.
+- **`server.fs.allow`** inclui a pasta real do `@raphasparda/ronin-shared` (fora deste repositório por causa do `link:`), e `resolve.dedupe: ['zod']` garante uma cópia só do zod.
+- A pasta do ronin-api vem de `scripts/ronin-api-dir.mjs`: `RONIN_API_DIR` (ambiente ou `.env`), padrão `../ronin-api`.
 
-- Binários: pacote npm `embedded-postgres` (`@embedded-postgres/<plataforma>`), PostgreSQL 18 oficial. Nada é instalado no sistema e não precisa de admin.
-- Ciclo de vida: `scripts/dev-db/postgres.mjs` usa `initdb` (primeira vez) e `pg_ctl start/stop` direto nos binários. `pg_ctl stop -m fast` garante desligamento limpo (checkpoint). A API de alto nível da lib não é usada porque no Windows ela para o servidor com `taskkill /f`.
-- Configuração vem do `DATABASE_URL` (porta, usuário, senha, nome do banco) e do `TEST_DATABASE_URL` (banco de testes, se no mesmo servidor). Cluster: UTF-8, locale `C` com provider `builtin` `C.UTF-8`, autenticação `scram-sha-256`, escuta só em `127.0.0.1`.
-- Arquivos em `.data/` (ignorada pelo git): `postgres/` (dados), `postgres.log` (log do servidor), `pg_ctl.out` (saída do último comando `pg_ctl`), `postgres.owner.json` (PID do processo que subiu o banco).
+Variáveis opcionais deste repositório: [`.env.example`](../../.env.example). Não há `.env` obrigatório aqui.
 
-Quem sobe o banco é dono dele e o para ao sair:
+## E2E (`pnpm test:e2e`)
 
-| Situação ao rodar `pnpm dev`, `pnpm db:dev` ou `pnpm test`      | Comportamento                                     |
-| --------------------------------------------------------------- | ------------------------------------------------- |
-| Nada rodando                                                    | sobe o cluster e para ao sair                     |
-| Cluster local rodando com dono vivo (ex.: `pnpm db:dev`)        | reaproveita, não para                             |
-| Cluster local rodando sem dono (processo anterior morto à força) | assume e para ao sair                             |
-| `DATABASE_URL` responde e não é o cluster local (Docker/nativo) | reaproveita, não para                             |
-| Porta ocupada por outro Postgres que recusa `kanban`            | erro explicando para ajustar a porta no `.env`    |
-| `DEV_DB_EXTERNAL_ONLY=true` (CI) e banco fora do ar             | erro; nunca sobe o cluster local (docs/ops/ci.md) |
+`e2e/run.mjs`:
 
-## Migrations
+1. localiza o ronin-api (`RONIN_API_DIR`) e confere que ele tem `node_modules`;
+2. usa `scripts/dev-db/postgres.mjs` **do ronin-api** para subir (ou reaproveitar) o PostgreSQL local de lá (dados em `ronin-api/.data`) e criar o banco isolado `kanban_e2e` no servidor do `DATABASE_URL` (ambiente ou `.env` do ronin-api);
+3. aplica as migrations nesse banco (`pnpm run db:migrate` no ronin-api);
+4. roda o Playwright, cujo `webServer` sobe a API do ronin-api (`pnpm exec tsx src/server.ts`, porta 3100) e o Vite deste repositório (porta 5320);
+5. para o PostgreSQL se foi ele que o subiu.
 
-- `pnpm dev`: aplica automaticamente em `DATABASE_URL` antes de subir a API.
-- `pnpm test`: o globalSetup aplica em `TEST_DATABASE_URL` (`kanban_test`) antes dos testes.
-- Manual: `pnpm db:migrate` (idempotente; registro em `drizzle.__drizzle_migrations`; execuções concorrentes são serializadas por advisory lock).
-- Mudou o schema em `apps/api/src/db/schema`: `pnpm db:generate --name <descricao>`, revise o SQL em `apps/api/drizzle/` e commite. Nunca edite migration já aplicada.
+Os bancos `kanban` (dev) e `kanban_test` (Vitest da API) nunca são tocados; dá para rodar com o `pnpm dev` aberto. Argumentos extras vão para o Playwright: `pnpm test:e2e --project=desktop`, `pnpm test:e2e --headed`.
 
-## Problemas comuns
+Na primeira vez: `pnpm exec playwright install chromium`.
 
-**"Porta 5310 is already in use"**: outra instância do `pnpm dev` está aberta. Feche-a (Ctrl+C) ou encontre o processo: `Get-NetTCPConnection -LocalPort 5310 | Select-Object OwningProcess`.
+Portas alternativas (outro E2E rodando): `$env:E2E_API_PORT='3110'; $env:E2E_WEB_PORT='5330'; pnpm test:e2e`.
 
-**"pg_ctl start falhou ... Porta 5433 ocupada"**: algum programa usa a 5433 (ex.: container do `pnpm db:up`). Pare-o ou troque a porta em `DATABASE_URL`/`TEST_DATABASE_URL`.
+## Trocar para o `@raphasparda/ronin-shared` publicado
 
-**Fechei o terminal e o banco continuou rodando**: na próxima execução de `pnpm dev`/`pnpm db:dev` ele é assumido e parado ao sair. Para parar na hora:
-
-```powershell
-& (Get-ChildItem node_modules\.pnpm\@embedded-postgres*\node_modules\@embedded-postgres\*\native\bin\pg_ctl.exe).FullName stop -D .data\postgres -m fast
-```
-
-**Zerar o banco local** (apaga todos os dados de desenvolvimento): com tudo parado, apague a pasta `.data\postgres` (`Remove-Item -Recurse -Force .data\postgres`). A próxima execução recria o cluster e os bancos.
-
-**Ver o log do Postgres**: `Get-Content .data\postgres.log -Tail 50`.
-
-## Alternativas
-
-Docker (`pnpm db:up`) e Postgres nativo (`infra/postgres/local-setup.sql`) continuam suportados; veja o README. Nos dois casos o `pnpm dev` detecta o banco respondendo e só sobe API e web. Para não gerenciar banco nenhum, use `pnpm dev:app`.
+Por padrão o web usa a pasta irmã. Para consumir a versão do GitHub Packages (`^0.1.0`) com `.npmrc` e token, siga `docs/ops/shared-package.md` do ronin-api (seção "Consumir pelo registro no ronin-web").
