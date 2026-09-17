@@ -209,7 +209,7 @@ Ver quadros arquivados →
 - Tile `<a>` `bg-surface rounded-xl shadow-sm border border-border`, hover `shadow-md`.
   - A faixa decorativa (`aria-hidden`) mostra a proporção dos cards abertos por lista, nas cores das listas.
   - Pílulas "N abertos" (neutra) e "N atrasados" (`data-status="overdue"`).
-  - *Os contadores dependem de dados agregados que `GET /api/boards` não retorna hoje. Se o arquiteto não incluir, o tile mostra só o nome e a faixa some (sem bloquear o MVP).*
+  - *Os contadores dependem de dados agregados que `GET /api/boards` não retorna hoje. Se a API não incluir, o tile mostra só o nome e a faixa some (sem bloquear o MVP).*
 - Ordem alfabética (`localeCompare('pt-BR')`).
 - **Novo quadro:** Dialog "Nome do quadro" + ajuda "Ele já vem com as listas A fazer, Fazendo e Concluído." + [Criar quadro]. Ao criar, abre `/b/:id`.
 - **`/quadros/arquivados`:** lista com nome, pílula "Arquivado", [Restaurar] e [Excluir] (Admin). Vazio: "Nenhum quadro arquivado."
