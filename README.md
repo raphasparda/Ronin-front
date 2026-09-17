@@ -2,7 +2,7 @@
   <img src="docs/images/ronin-logo.png" alt="Logo do Ronin" width="160" />
 </p>
 
-# Ronin Web
+# Ronin
 
 **Quadros de tarefas coloridos, rápidos e acessíveis para equipes pequenas.**
 
