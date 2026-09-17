@@ -37,8 +37,15 @@ else
 fi
 PUBLIC_API_URL='https://github.com/raphasparda/Ronin-End.git'
 
+# O Render reaproveita a pasta do projeto entre builds, então a cópia do ronin-api pode já
+# existir. Se for um clone válido, atualiza; qualquer outra coisa no caminho é erro.
+REUSE_CLONE=no
 if [ -e "$API_DIR" ]; then
-  fail "$API_DIR já existe. O build clona o ronin-api do zero; remova a pasta antes (não é apagada automaticamente)."
+  if [ -d "$API_DIR/.git" ] && [ -f "$API_DIR/packages/shared/package.json" ]; then
+    REUSE_CLONE=yes
+  else
+    fail "$API_DIR já existe e não é um clone do ronin-api. Remova a pasta antes do build."
+  fi
 fi
 
 # Esconde o token em qualquer saída do git (mensagens de erro podem repetir a URL).
@@ -57,13 +64,22 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 trap 'exit 130' INT TERM
 
-log "Clonando ronin-api (ref: $API_REF) em $API_DIR"
 clone_status=0
-GIT_TERMINAL_PROMPT=0 git clone --quiet --depth 1 --branch "$API_REF" -- "$API_URL" "$API_DIR" \
-  >"$TMP_DIR/clone.log" 2>&1 || clone_status=$?
+if [ "$REUSE_CLONE" = yes ]; then
+  log "Atualizando ronin-api existente (ref: $API_REF) em $API_DIR"
+  {
+    GIT_TERMINAL_PROMPT=0 git -C "$API_DIR" fetch --quiet --depth 1 -- "$API_URL" "$API_REF" &&
+      git -C "$API_DIR" reset --hard --quiet FETCH_HEAD &&
+      git -C "$API_DIR" clean -fdq
+  } >"$TMP_DIR/clone.log" 2>&1 || clone_status=$?
+else
+  log "Clonando ronin-api (ref: $API_REF) em $API_DIR"
+  GIT_TERMINAL_PROMPT=0 git clone --quiet --depth 1 --branch "$API_REF" -- "$API_URL" "$API_DIR" \
+    >"$TMP_DIR/clone.log" 2>&1 || clone_status=$?
+fi
 redact <"$TMP_DIR/clone.log"
 if [ "$clone_status" -ne 0 ]; then
-  fail "git clone falhou (código $clone_status). Confira GH_RONIN_END_TOKEN (validade e acesso ao Ronin-End) e RONIN_API_REF."
+  fail "não consegui obter o ronin-api (código $clone_status). Confira GH_RONIN_END_TOKEN (validade e acesso ao Ronin-End) e RONIN_API_REF."
 fi
 if [ -z "${RONIN_API_GIT_URL:-}" ]; then
   git -C "$API_DIR" remote set-url origin "$PUBLIC_API_URL"
