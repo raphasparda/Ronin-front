@@ -18,7 +18,7 @@ test.describe('smoke: instância limpa', () => {
     expect(await health.json()).toEqual({ status: 'ok', db: 'ok' });
 
     const status = await page.request.get('/api/setup/status');
-    expect(await status.json()).toEqual({ needsSetup: true });
+    expect(await status.json()).toEqual({ needsSetup: true, requiresSetupToken: false });
 
     await page.goto('/');
     await expect(page).toHaveURL(/\/setup$/);

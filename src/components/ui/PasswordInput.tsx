@@ -3,9 +3,12 @@ import { useState } from 'react';
 
 import { Input, type InputProps } from './Input';
 
-export type PasswordInputProps = Omit<InputProps, 'type' | 'trailing'>;
+export interface PasswordInputProps extends Omit<InputProps, 'type' | 'trailing'> {
+  /** Rótulo do botão de mostrar/ocultar. */
+  revealLabel?: string;
+}
 
-export function PasswordInput(props: PasswordInputProps) {
+export function PasswordInput({ revealLabel = 'Mostrar senha', ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -15,7 +18,7 @@ export function PasswordInput(props: PasswordInputProps) {
       trailing={
         <button
           type="button"
-          aria-label="Mostrar senha"
+          aria-label={revealLabel}
           aria-pressed={visible}
           onClick={() => setVisible((value) => !value)}
           className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-text md:size-7"

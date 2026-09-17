@@ -20,7 +20,7 @@ import {
 } from '../../lib/form-errors';
 import { MESSAGES } from '../../lib/query-client';
 import { safeNextPath } from '../../lib/safe-next';
-import { setupStatusQueryKey, useLogin, useSetupStatus } from './auth-api';
+import { setNeedsSetup, useLogin, useSetupStatus } from './auth-api';
 import { AuthLayout } from './AuthLayout';
 import { BootError, BootLoading } from './BootScreen';
 import type { LoginLocationState } from './RequireAuth';
@@ -123,7 +123,7 @@ export function LoginPage() {
         }
         return;
       case 'SETUP_REQUIRED':
-        queryClient.setQueryData(setupStatusQueryKey, { needsSetup: true });
+        setNeedsSetup(queryClient, true);
         return;
       case 'VALIDATION_ERROR': {
         const { fieldErrors, other } = splitErrorDetails(error.details, FIELDS);

@@ -21,31 +21,41 @@ import {
 } from '../../lib/form-errors';
 import { MESSAGES } from '../../lib/query-client';
 import { getTimezoneOptions } from '../../lib/timezones';
-import { setupStatusQueryKey, useSetup, useSetupStatus } from './auth-api';
+import { setNeedsSetup, setupStatusQueryKey, useSetup, useSetupStatus } from './auth-api';
 import { AuthLayout } from './AuthLayout';
 import { BootError, BootLoading } from './BootScreen';
 
 const PASSWORD_MISMATCH = 'As senhas não conferem.';
 
-/** Corpo do setup (schema compartilhado) + confirmação de senha, que só existe na tela. */
-export const setupFormSchema = z
-  .intersection(
-    setupRequestSchema,
-    z.object({ passwordConfirmation: z.string().min(1, { error: 'Repita a senha.' }) }),
-  )
-  .refine((values) => values.password === values.passwordConfirmation, {
-    error: PASSWORD_MISMATCH,
-    path: ['passwordConfirmation'],
-    when: (payload) => {
-      const value = payload.value as { passwordConfirmation?: unknown };
-      return typeof value.passwordConfirmation === 'string' && value.passwordConfirmation !== '';
-    },
-  });
+/**
+ * Corpo do setup (schema compartilhado) + confirmação de senha, que só existe na tela. O código de
+ * configuração é opcional no contrato; a tela o exige quando a instância pede (`requiresSetupToken`).
+ */
+export function createSetupFormSchema(requiresSetupToken: boolean) {
+  return z
+    .intersection(
+      setupRequestSchema,
+      z.object({
+        setupToken: z.string().min(requiresSetupToken ? 1 : 0),
+        passwordConfirmation: z.string().min(1, { error: 'Repita a senha.' }),
+      }),
+    )
+    .refine((values) => values.password === values.passwordConfirmation, {
+      error: PASSWORD_MISMATCH,
+      path: ['passwordConfirmation'],
+      when: (payload) => {
+        const value = payload.value as { passwordConfirmation?: unknown };
+        return typeof value.passwordConfirmation === 'string' && value.passwordConfirmation !== '';
+      },
+    });
+}
 
-type SetupFormValues = z.input<typeof setupFormSchema>;
-type SetupFormOutput = z.output<typeof setupFormSchema>;
+type SetupFormSchema = ReturnType<typeof createSetupFormSchema>;
+type SetupFormValues = z.input<SetupFormSchema>;
+type SetupFormOutput = z.output<SetupFormSchema>;
 
 const FIELDS = [
+  'setupToken',
   'workspaceName',
   'name',
   'email',
@@ -55,6 +65,10 @@ const FIELDS = [
 ] as const satisfies ReadonlyArray<keyof SetupFormValues>;
 
 const FIELD_MESSAGES: FieldMessages<keyof SetupFormValues> = {
+  setupToken: {
+    too_small: 'Informe o código de configuração.',
+    too_big: 'O código de configuração pode ter no máximo 200 caracteres.',
+  },
   workspaceName: {
     too_small: 'Informe o nome da equipe.',
     too_big: 'O nome da equipe pode ter no máximo 100 caracteres.',
@@ -76,19 +90,24 @@ const FIELD_MESSAGES: FieldMessages<keyof SetupFormValues> = {
 
 export const SETUP_MESSAGES = {
   alreadyDone: 'Esta instância já foi configurada. Entre com sua conta.',
+  tokenInvalid: 'Código de configuração inválido.',
+  tokenNowRequired:
+    'Esta instância pede um código de configuração. Preencha o campo e tente de novo.',
   rateLimited: (seconds: number | null) =>
     seconds === null
       ? 'Muitas tentativas seguidas. Tente de novo em instantes.'
       : `Muitas tentativas seguidas. Tente de novo em ${formatWait(seconds)}.`,
 } as const;
 
-const resolver = schemaResolver(setupFormSchema, FIELD_MESSAGES);
+const resolverWithToken = schemaResolver(createSetupFormSchema(true), FIELD_MESSAGES);
+const resolverWithoutToken = schemaResolver(createSetupFormSchema(false), FIELD_MESSAGES);
 
 export function SetupPage() {
   const setupStatus = useSetupStatus();
   const setup = useSetup();
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState<string | null>(null);
+  const requiresSetupToken = setupStatus.data?.requiresSetupToken === true;
 
   const {
     register,
@@ -96,10 +115,11 @@ export function SetupPage() {
     setError,
     formState: { errors, isSubmitted },
   } = useForm<SetupFormValues, unknown, SetupFormOutput>({
-    resolver,
+    resolver: requiresSetupToken ? resolverWithToken : resolverWithoutToken,
     mode: 'onBlur',
     reValidateMode: 'onChange',
     defaultValues: {
+      setupToken: '',
       workspaceName: '',
       name: '',
       email: '',
@@ -133,7 +153,20 @@ export function SetupPage() {
     switch (error.code) {
       case 'SETUP_ALREADY_DONE':
         toast.info(SETUP_MESSAGES.alreadyDone);
-        queryClient.setQueryData(setupStatusQueryKey, { needsSetup: false });
+        setNeedsSetup(queryClient, false);
+        return;
+      case 'SETUP_TOKEN_INVALID':
+        if (requiresSetupToken) {
+          setError(
+            'setupToken',
+            { type: 'server', message: SETUP_MESSAGES.tokenInvalid },
+            { shouldFocus: true },
+          );
+        } else {
+          // O servidor passou a exigir o código depois que a tela abriu: recarrega o status.
+          setFormError(SETUP_MESSAGES.tokenNowRequired);
+          void queryClient.invalidateQueries({ queryKey: setupStatusQueryKey });
+        }
         return;
       case 'RATE_LIMITED':
       case 'TOO_MANY_ATTEMPTS':
@@ -157,9 +190,9 @@ export function SetupPage() {
     }
   };
 
-  const onSubmit = handleSubmit(({ passwordConfirmation: _confirmation, ...body }) => {
+  const onSubmit = handleSubmit(({ passwordConfirmation: _confirmation, setupToken, ...body }) => {
     setFormError(null);
-    setup.mutate(body, { onError });
+    setup.mutate(requiresSetupToken ? { ...body, setupToken } : body, { onError });
   });
 
   return (
@@ -176,6 +209,19 @@ export function SetupPage() {
           }
         />
         <div className="flex flex-col gap-4">
+          {requiresSetupToken && (
+            <PasswordInput
+              label="Código de configuração"
+              revealLabel="Mostrar código"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={200}
+              hint="Peça o código a quem instalou o Ronin no servidor."
+              error={errors.setupToken?.message}
+              {...register('setupToken')}
+            />
+          )}
           <Input
             label="Nome da equipe"
             autoComplete="organization"

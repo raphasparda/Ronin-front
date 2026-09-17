@@ -48,6 +48,118 @@ describe('SetupPage', () => {
     expect(body).toEqual({ ...VALID, timezone: DEFAULT_TIMEZONE });
   });
 
+  it('sem requiresSetupToken, não mostra o campo de código nem envia setupToken', async () => {
+    server.use(authHandlers.setupStatus(true, { requiresSetupToken: false }));
+    let body: unknown;
+    server.use(
+      http.post('/api/setup', async ({ request }) => {
+        body = await request.clone().json();
+        return undefined;
+      }),
+    );
+    renderApp('/setup');
+
+    const user = await fillForm();
+    expect(screen.queryByLabelText('Código de configuração')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Criar conta e começar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Quadros' })).toBeInTheDocument();
+    expect(body).not.toHaveProperty('setupToken');
+  });
+
+  it('com requiresSetupToken, pede o código no topo, oculto, e envia setupToken', async () => {
+    server.use(
+      authHandlers.setupStatus(true, { requiresSetupToken: true }),
+      authHandlers.setup({ setupToken: 'codigo-do-servidor-123' }),
+    );
+    let body: unknown;
+    server.use(
+      http.post('/api/setup', async ({ request }) => {
+        body = await request.clone().json();
+        return undefined;
+      }),
+    );
+    const { router } = renderApp('/setup');
+
+    const code = await screen.findByLabelText('Código de configuração');
+    const fields = screen.getAllByRole('textbox');
+    expect(
+      code.compareDocumentPosition(fields[0]!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(code).toHaveAttribute('type', 'password');
+    expect(code).toHaveAttribute('autocomplete', 'off');
+    expect(code).toHaveAccessibleDescription('Peça o código a quem instalou o Ronin no servidor.');
+
+    const user = userEvent.setup();
+    await user.type(code, 'codigo-do-servidor-123');
+    await user.click(screen.getByRole('button', { name: 'Mostrar código' }));
+    expect(code).toHaveAttribute('type', 'text');
+    await fillForm();
+    await user.click(screen.getByRole('button', { name: 'Criar conta e começar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Quadros' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+    expect(body).toEqual({
+      ...VALID,
+      timezone: DEFAULT_TIMEZONE,
+      setupToken: 'codigo-do-servidor-123',
+    });
+  });
+
+  it('com requiresSetupToken, código vazio é barrado no cliente', async () => {
+    server.use(authHandlers.setupStatus(true, { requiresSetupToken: true }));
+    renderApp('/setup');
+
+    const user = await fillForm();
+    await user.click(screen.getByRole('button', { name: 'Criar conta e começar' }));
+
+    const code = screen.getByLabelText('Código de configuração');
+    expect(await screen.findByText('Informe o código de configuração.')).toBeVisible();
+    expect(code).toHaveAttribute('aria-invalid', 'true');
+    expect(code).toHaveFocus();
+  });
+
+  it('SETUP_TOKEN_INVALID mostra o erro no campo de código e foca nele', async () => {
+    server.use(
+      authHandlers.setupStatus(true, { requiresSetupToken: true }),
+      authHandlers.setup({ setupToken: 'codigo-do-servidor-123' }),
+    );
+    renderApp('/setup');
+
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Código de configuração'), 'codigo-errado');
+    await fillForm();
+    await user.click(screen.getByRole('button', { name: 'Criar conta e começar' }));
+
+    const code = screen.getByLabelText('Código de configuração');
+    await waitFor(() => expect(code).toHaveFocus());
+    expect(code).toHaveAttribute('aria-invalid', 'true');
+    expect(code).toHaveAccessibleDescription(
+      'Código de configuração inválido. Peça o código a quem instalou o Ronin no servidor.',
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Corrija 1 campo para continuar.');
+    expect(screen.getByRole('heading', { name: 'Configurar a equipe' })).toBeInTheDocument();
+  });
+
+  it('SETUP_TOKEN_INVALID sem o campo na tela recarrega o status e passa a pedir o código', async () => {
+    server.use(
+      authHandlers.setupStatus(true, { requiresSetupToken: false }),
+      authHandlers.setupError('SETUP_TOKEN_INVALID', {
+        message: 'Código de configuração inválido.',
+      }),
+    );
+    renderApp('/setup');
+
+    const user = await fillForm();
+    server.use(authHandlers.setupStatus(true, { requiresSetupToken: true }));
+    await user.click(screen.getByRole('button', { name: 'Criar conta e começar' }));
+
+    expect(await screen.findByLabelText('Código de configuração')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Esta instância pede um código de configuração. Preencha o campo e tente de novo.',
+    );
+  });
+
   it('mostra os details de VALIDATION_ERROR nos campos e foca o primeiro', async () => {
     server.use(
       authHandlers.setupStatus(true),

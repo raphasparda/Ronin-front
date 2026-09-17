@@ -64,7 +64,7 @@ test('instância limpa: setup → home logada → logout → login errado → lo
       await expect(other).toHaveURL(/\/login(\?|$)/);
       await expect(other.getByRole('heading', { level: 1, name: 'Entrar' })).toBeVisible();
       const status = await other.request.get('/api/setup/status');
-      expect(await status.json()).toEqual({ needsSetup: false });
+      expect(await status.json()).toEqual({ needsSetup: false, requiresSetupToken: false });
     } finally {
       await anonymous.close();
     }

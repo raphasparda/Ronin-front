@@ -4,13 +4,22 @@ import {
   type AuthSessionResponse,
   type LoginRequest,
   type SetupRequest,
+  type SetupStatusResponse,
 } from '@raphasparda/ronin-shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { api, isApiError } from '../../lib/api-client';
 
 export const setupStatusQueryKey = ['setup-status'] as const;
 export const sessionQueryKey = ['session'] as const;
+
+/** Atualiza `needsSetup` no cache, mantendo o `requiresSetupToken` já conhecido. */
+export function setNeedsSetup(queryClient: QueryClient, needsSetup: boolean) {
+  queryClient.setQueryData<SetupStatusResponse>(setupStatusQueryKey, (current) => ({
+    requiresSetupToken: current?.requiresSetupToken ?? false,
+    needsSetup,
+  }));
+}
 
 export function useSetupStatus() {
   return useQuery({
@@ -51,7 +60,7 @@ export function useSetup() {
     mutationFn: (body: SetupRequest) =>
       api.post('/api/setup', body, { schema: authSessionResponseSchema }),
     onSuccess: (session) => {
-      queryClient.setQueryData(setupStatusQueryKey, { needsSetup: false });
+      setNeedsSetup(queryClient, false);
       queryClient.setQueryData(sessionQueryKey, session);
     },
     meta: { silentErrors: true },

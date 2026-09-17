@@ -46,9 +46,9 @@ function validationError(error: z.ZodError) {
 }
 
 export const authHandlers = {
-  setupStatus: (needsSetup: boolean) =>
+  setupStatus: (needsSetup: boolean, { requiresSetupToken = false } = {}) =>
     http.get('/api/setup/status', () =>
-      HttpResponse.json(setupStatusResponseSchema.parse({ needsSetup })),
+      HttpResponse.json(setupStatusResponseSchema.parse({ needsSetup, requiresSetupToken })),
     ),
 
   me: (session: AuthSessionResponse = sessionFixture) =>
@@ -78,11 +78,19 @@ export const authHandlers = {
 
   logout: () => http.post('/api/auth/logout', () => new HttpResponse(null, { status: 204 })),
 
-  /** Valida o corpo com o schema compartilhado e devolve a sessão do admin criado. */
-  setup: () =>
+  /**
+   * Valida o corpo com o schema compartilhado e devolve a sessão do admin criado. Com
+   * `setupToken`, simula a instância com `SETUP_TOKEN`: código ausente ou diferente → 403.
+   */
+  setup: ({ setupToken }: { setupToken?: string } = {}) =>
     http.post('/api/setup', async ({ request }) => {
       const parsed = setupRequestSchema.safeParse(await request.json());
       if (!parsed.success) return validationError(parsed.error);
+      if (setupToken !== undefined && parsed.data.setupToken !== setupToken) {
+        return apiErrorResponse('SETUP_TOKEN_INVALID', {
+          message: 'Código de configuração inválido.',
+        });
+      }
       const { name, email, workspaceName, timezone } = parsed.data;
       return HttpResponse.json(
         authSessionResponseSchema.parse({
