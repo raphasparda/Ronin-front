@@ -136,6 +136,29 @@ describe('Card bloqueado no quadro', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('em itens arquivados vem com cadeado, sem a lista de origem e sem ações', async () => {
+    const user = userEvent.setup();
+    lockBudgetForMember();
+    boardDb.cards = boardDb.cards.map((card) =>
+      card.id === CARD_IDS.budget ? { ...card, archivedAt: new Date().toISOString() } : card,
+    );
+    renderApp(`/b/${BOARD_ID}`);
+
+    await user.click(await screen.findByRole('button', { name: 'Opções do quadro' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Itens arquivados…' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Itens arquivados' });
+    const cards = await within(dialog).findByRole('list', { name: 'Cards arquivados' });
+    expect(within(cards).getByText('Revisar orçamento')).toBeInTheDocument();
+    expect(within(cards).getByText('Card restrito')).toBeInTheDocument();
+    expect(within(cards).getByText('Você não tem acesso a este card.')).toBeInTheDocument();
+    expect(
+      within(cards).getByRole('button', { name: 'Restaurar card Revisar orçamento' }),
+    ).toBeDisabled();
+    // Sem a lista de origem: o card bloqueado não traz nenhum outro campo.
+    expect(within(cards).queryByText('Fazendo')).not.toBeInTheDocument();
+  });
+
   it('não aparece em Meus cards nem nas notificações', async () => {
     lockBudgetForMember();
     boardDb.cards = boardDb.cards.map((card) =>
