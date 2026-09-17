@@ -1,7 +1,8 @@
 import { ShieldAlert } from 'lucide-react';
-import { Link, NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
 
 import { EmptyState } from '../../components/ui/EmptyState';
+import { usePageTransition } from '../../lib/use-page-transition';
 import { MESSAGES } from '../../lib/query-client';
 import { useSessionUser } from '../auth/auth-api';
 
@@ -55,6 +56,16 @@ export function AdminLayout() {
           ))}
         </ul>
       </nav>
+      <AdminTabContent />
+    </div>
+  );
+}
+
+function AdminTabContent() {
+  const { pathname } = useLocation();
+  const ref = usePageTransition<HTMLDivElement>(pathname);
+  return (
+    <div ref={ref}>
       <Outlet />
     </div>
   );
