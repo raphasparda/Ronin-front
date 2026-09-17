@@ -16,6 +16,8 @@ import {
   checklistProgress,
   checklistResponseSchema,
   commentResponseSchema,
+  comparePriority,
+  completeTargetListId,
   completionChangeOnMove,
   createChecklistItemRequestSchema,
   createChecklistRequestSchema,
@@ -36,7 +38,9 @@ import {
   listResponseSchema,
   moveCardRequestSchema,
   moveListRequestSchema,
+  myCardsResponseSchema,
   nextPaletteColor,
+  reopenTargetListId,
   updateCardRequestSchema,
   sortByPosition,
   updateBoardRequestSchema,
@@ -689,7 +693,100 @@ const commentHandlers = [
   }),
 ];
 
+function recordMove(card: CardRecord, toListId: string) {
+  const from = findList(card.listId);
+  const to = findList(toListId);
+  const boardName = findBoard(card.boardId)?.name ?? '';
+  record(card.id, {
+    type: 'card_moved',
+    data: {
+      fromListId: card.listId,
+      fromListName: from?.name ?? '',
+      toListId,
+      toListName: to?.name ?? '',
+      fromBoardId: card.boardId,
+      fromBoardName: boardName,
+      toBoardId: card.boardId,
+      toBoardName: boardName,
+    },
+  });
+}
+
+/**
+ * `complete` e `reopen` (api.md §11): concluir leva ao **fim** da lista de conclusão; reabrir,
+ * a partir dela, leva ao **topo** da primeira lista ativa não-conclusão. No-op se já no estado.
+ */
+function changeCompletion(card: CardRecord, action: 'complete' | 'reopen') {
+  const lists = boardDb.lists.filter((list) => list.boardId === card.boardId);
+  const alreadyDone = (action === 'complete') === (card.status === 'completed');
+  if (alreadyDone) {
+    return cardMutationResultSchema.parse({
+      card: summary(card),
+      completionChange: null,
+      removedLabelIds: [],
+    });
+  }
+  const targetListId =
+    action === 'complete' ? completeTargetListId(card, lists) : reopenTargetListId(card, lists);
+  let position = card.position;
+  if (targetListId !== null) {
+    const siblings = activeCards(targetListId);
+    position =
+      action === 'complete'
+        ? generateKeyBetween(siblings.at(-1)?.position ?? null, null)
+        : generateKeyBetween(null, siblings[0]?.position ?? null);
+    recordMove(card, targetListId);
+  }
+  const updated = updateCard(card.id, {
+    listId: targetListId ?? card.listId,
+    position,
+    ...(action === 'complete' ? completed() : reopened()),
+  });
+  record(card.id, { type: action === 'complete' ? 'card_completed' : 'card_reopened', data: {} });
+  return cardMutationResultSchema.parse({
+    card: summary(updated),
+    completionChange: action === 'complete' ? 'completed' : 'reopened',
+    removedLabelIds: [],
+  });
+}
+
+/** `GET /api/me/cards` (api.md §6): abertos, ativos, atribuídos a quem está logado, na ordem D1. */
+function myCards() {
+  const cards = boardDb.cards
+    .filter((card) => {
+      const list = findList(card.listId);
+      return (
+        card.assigneeIds.includes(mockActor.id) &&
+        card.status === 'open' &&
+        !card.archivedAt &&
+        list !== undefined &&
+        !list.archivedAt &&
+        !findBoard(card.boardId)?.archivedAt
+      );
+    })
+    .sort((a, b) => {
+      if (a.dueAt !== b.dueAt) {
+        if (a.dueAt === null) return 1;
+        if (b.dueAt === null) return -1;
+        return a.dueAt.localeCompare(b.dueAt);
+      }
+      return comparePriority(a.priority, b.priority) || a.createdAt.localeCompare(b.createdAt);
+    })
+    .map((card) => {
+      const list = findList(card.listId);
+      return {
+        ...summary(card),
+        boardName: findBoard(card.boardId)?.name ?? '',
+        listName: list?.name ?? '',
+        listColor: list?.color ?? 'gray',
+      };
+    });
+  return myCardsResponseSchema.parse({ cards });
+}
+
 const cardHandlers = [
+  http.get('/api/me/cards', () => HttpResponse.json(myCards())),
+
   http.get('/api/users', () =>
     HttpResponse.json(usersResponseSchema.parse({ users: adminDb.users })),
   ),
@@ -890,6 +987,11 @@ const cardHandlers = [
       return HttpResponse.json(
         cardSummaryResponseSchema.parse({ card: summary(findCard(card.id) as CardRecord) }),
       );
+    }
+
+    if (action === 'complete' || action === 'reopen') {
+      if (card.archivedAt) return apiErrorResponse('CONFLICT');
+      return HttpResponse.json(changeCompletion(card, action));
     }
 
     return apiErrorResponse('NOT_FOUND');

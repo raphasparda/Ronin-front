@@ -1,5 +1,5 @@
 import type { AdminUser, Role } from '@kanban/shared';
-import { KeyRound, MoreHorizontal, UserCheck, UserX } from 'lucide-react';
+import { KeyRound, MoreHorizontal, UserCheck, UserRoundX, UserX } from 'lucide-react';
 import { useState } from 'react';
 
 import { Avatar } from '../../components/ui/Avatar';
@@ -7,14 +7,16 @@ import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { CopyField } from '../../components/ui/CopyField';
 import { Dialog } from '../../components/ui/Dialog';
-import { Menu, MenuItem } from '../../components/ui/Menu';
+import { Menu, MenuItem, MenuSeparator } from '../../components/ui/Menu';
 import { Pill } from '../../components/ui/Pill';
 import { ListSkeleton, LoadError } from '../../components/ui/QueryState';
 import { toast } from '../../components/ui/toast-store';
 import { isApiError } from '../../lib/api-client';
 import { isGloballyHandled, serverMessage } from '../../lib/api-errors';
 import { useSessionUser } from '../auth/auth-api';
+import { AnonymizeUserDialog } from './AnonymizeUserDialog';
 import {
+  useAnonymizeUser,
   useAdminUsers,
   useChangeRole,
   useCreatePasswordResetLink,
@@ -32,6 +34,8 @@ export const MEMBER_MESSAGES = {
   anonymized: 'Esta conta foi anonimizada.',
   reactivateFirst: 'Reative a conta antes de gerar o link.',
   notFound: 'Membro não encontrado. A lista foi atualizada.',
+  anonymizedDone: 'A conta foi anonimizada. O nome agora aparece como "Usuário removido".',
+  deactivateFirst: 'Desative a conta antes de anonimizar.',
 } as const;
 
 function mutationErrorToast(error: unknown) {
@@ -42,6 +46,7 @@ function mutationErrorToast(error: unknown) {
     CANNOT_TARGET_SELF: MEMBER_MESSAGES.self,
     USER_ANONYMIZED: MEMBER_MESSAGES.anonymized,
     USER_NOT_ACTIVE: MEMBER_MESSAGES.reactivateFirst,
+    USER_NOT_DEACTIVATED: MEMBER_MESSAGES.deactivateFirst,
     NOT_FOUND: MEMBER_MESSAGES.notFound,
   };
   toast.error(byCode[error.code] ?? serverMessage(error));
@@ -65,6 +70,7 @@ interface MemberRowProps {
   onDeactivate: (user: AdminUser) => void;
   onReactivate: (user: AdminUser) => void;
   onResetLink: (user: AdminUser) => void;
+  onAnonymize: (user: AdminUser) => void;
   busy: boolean;
 }
 
@@ -75,6 +81,7 @@ function MemberRow({
   onDeactivate,
   onReactivate,
   onResetLink,
+  onAnonymize,
   busy,
 }: MemberRowProps) {
   const displayName = user.name;
@@ -143,9 +150,19 @@ function MemberRow({
                 Desativar
               </MenuItem>
             ) : (
-              <MenuItem icon={<UserCheck size={16} />} onSelect={() => onReactivate(user)}>
-                Reativar
-              </MenuItem>
+              <>
+                <MenuItem icon={<UserCheck size={16} />} onSelect={() => onReactivate(user)}>
+                  Reativar
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem
+                  icon={<UserRoundX size={16} />}
+                  tone="danger"
+                  onSelect={() => onAnonymize(user)}
+                >
+                  Anonimizar…
+                </MenuItem>
+              </>
             )}
           </Menu>
         )}
@@ -160,9 +177,11 @@ export function MembersPage() {
   const changeRole = useChangeRole();
   const setActive = useSetUserActive();
   const createResetLink = useCreatePasswordResetLink();
+  const anonymizeUser = useAnonymizeUser();
 
   const [demoting, setDemoting] = useState<AdminUser | null>(null);
   const [deactivating, setDeactivating] = useState<AdminUser | null>(null);
+  const [anonymizing, setAnonymizing] = useState<AdminUser | null>(null);
   const [resetLink, setResetLink] = useState<{ name: string; url: string } | null>(null);
 
   const applyRole = (user: AdminUser, role: Role) => {
@@ -213,6 +232,19 @@ export function MembersPage() {
     );
   };
 
+  const anonymize = (user: AdminUser) => {
+    anonymizeUser.mutate(user.id, {
+      onSuccess: () => {
+        setAnonymizing(null);
+        toast.success(MEMBER_MESSAGES.anonymizedDone);
+      },
+      onError: (error) => {
+        setAnonymizing(null);
+        mutationErrorToast(error);
+      },
+    });
+  };
+
   const generateResetLink = (user: AdminUser) => {
     createResetLink.mutate(user.id, {
       onSuccess: ({ url }) => setResetLink({ name: user.name, url }),
@@ -249,11 +281,12 @@ export function MembersPage() {
                 key={user.id}
                 user={user}
                 isSelf={user.id === session?.id}
-                busy={changeRole.isPending || setActive.isPending}
+                busy={changeRole.isPending || setActive.isPending || anonymizeUser.isPending}
                 onRoleChange={onRoleChange}
                 onDeactivate={setDeactivating}
                 onReactivate={reactivate}
                 onResetLink={generateResetLink}
+                onAnonymize={setAnonymizing}
               />
             ))}
           </ul>
@@ -286,6 +319,13 @@ export function MembersPage() {
         pendingLabel="Desativando…"
         onConfirm={() => deactivating && deactivate(deactivating)}
         onClose={() => setDeactivating(null)}
+      />
+
+      <AnonymizeUserDialog
+        user={anonymizing}
+        pending={anonymizeUser.isPending}
+        onConfirm={anonymize}
+        onClose={() => setAnonymizing(null)}
       />
 
       <Dialog

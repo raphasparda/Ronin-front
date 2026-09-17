@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 import { toast } from '../components/ui/toast-store';
 import { resetAdminDb } from './admin-handlers';
 import { resetBoardDb } from './board-handlers';
+import { resetNotificationDb } from './notification-handlers';
 import { server } from './server';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -16,6 +17,7 @@ afterEach(() => {
   toast.clear();
   resetAdminDb();
   resetBoardDb();
+  resetNotificationDb();
   window.localStorage.clear();
   document.documentElement.setAttribute('data-theme', 'light');
 });

@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { toast } from '../../components/ui/toast-store';
 import { isApiError } from '../../lib/api-client';
@@ -17,41 +17,49 @@ export const BOARD_ERROR_MESSAGES = {
  */
 export function useBoardErrorHandler(boardId: string) {
   const queryClient = useQueryClient();
+  return (error: unknown, fallback: string) =>
+    handleBoardError(queryClient, boardId, error, fallback);
+}
 
-  return (error: unknown, fallback: string) => {
-    const refresh = () => void queryClient.invalidateQueries({ queryKey: boardQueryKey(boardId) });
-    if (!isApiError(error) || error.isNetworkError || error.status >= 500) {
-      toast.error(fallback);
+/** Mesmo tratamento de `useBoardErrorHandler`, para quando o quadro só é conhecido na ação. */
+export function handleBoardError(
+  queryClient: QueryClient,
+  boardId: string,
+  error: unknown,
+  fallback: string,
+): void {
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: boardQueryKey(boardId) });
+  if (!isApiError(error) || error.isNetworkError || error.status >= 500) {
+    toast.error(fallback);
+    return;
+  }
+  switch (error.code) {
+    case 'UNAUTHENTICATED':
       return;
-    }
-    switch (error.code) {
-      case 'UNAUTHENTICATED':
-        return;
-      case 'BOARD_ARCHIVED':
-        toast.error(BOARD_ERROR_MESSAGES.boardArchived);
-        refresh();
-        return;
-      case 'LIST_ARCHIVED':
-        toast.error(BOARD_ERROR_MESSAGES.listArchived);
-        refresh();
-        return;
-      case 'NOT_FOUND':
-        toast.error(BOARD_ERROR_MESSAGES.notFound);
-        refresh();
-        return;
-      case 'FORBIDDEN':
-        toast.error(MESSAGES.forbidden);
-        return;
-      case 'RATE_LIMITED':
-      case 'TOO_MANY_ATTEMPTS':
-        toast.error(MESSAGES.rateLimited(error.retryAfterSeconds));
-        return;
-      case 'INVALID_PLACEMENT':
-        toast.error(fallback);
-        refresh();
-        return;
-      default:
-        toast.error(error.fromServer ? error.message : fallback);
-    }
-  };
+    case 'BOARD_ARCHIVED':
+      toast.error(BOARD_ERROR_MESSAGES.boardArchived);
+      refresh();
+      return;
+    case 'LIST_ARCHIVED':
+      toast.error(BOARD_ERROR_MESSAGES.listArchived);
+      refresh();
+      return;
+    case 'NOT_FOUND':
+      toast.error(BOARD_ERROR_MESSAGES.notFound);
+      refresh();
+      return;
+    case 'FORBIDDEN':
+      toast.error(MESSAGES.forbidden);
+      return;
+    case 'RATE_LIMITED':
+    case 'TOO_MANY_ATTEMPTS':
+      toast.error(MESSAGES.rateLimited(error.retryAfterSeconds));
+      return;
+    case 'INVALID_PLACEMENT':
+      toast.error(fallback);
+      refresh();
+      return;
+    default:
+      toast.error(error.fromServer ? error.message : fallback);
+  }
 }

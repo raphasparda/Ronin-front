@@ -2,8 +2,10 @@ import { Link, useLocation } from 'react-router';
 
 import { useSessionUser } from '../../features/auth/auth-api';
 import { UserMenu } from '../../features/auth/UserMenu';
+import { NotificationsMenu } from '../../features/notifications/NotificationsMenu';
 import { ThemeSwitch } from '../ui/ThemeSwitch';
 import { Logo } from './Logo';
+import { isBoardsSection, isMyCardsSection } from './nav-sections';
 
 function navLinkClass(isActive: boolean) {
   return `relative flex h-14 items-center px-1 no-underline ${
@@ -13,14 +15,11 @@ function navLinkClass(isActive: boolean) {
   }`;
 }
 
-function isBoardsSection(pathname: string): boolean {
-  return pathname === '/' || pathname.startsWith('/quadros') || pathname.startsWith('/b/');
-}
-
 export function AppHeader() {
   const { pathname } = useLocation();
   const user = useSessionUser();
   const boardsActive = isBoardsSection(pathname);
+  const myCardsActive = isMyCardsSection(pathname);
   const adminActive = pathname.startsWith('/admin');
 
   return (
@@ -38,6 +37,15 @@ export function AppHeader() {
                 Quadros
               </Link>
             </li>
+            <li>
+              <Link
+                to="/meus-cards"
+                aria-current={myCardsActive ? 'page' : undefined}
+                className={navLinkClass(myCardsActive)}
+              >
+                Meus cards
+              </Link>
+            </li>
             {user?.role === 'admin' && (
               <li>
                 <Link
@@ -51,7 +59,8 @@ export function AppHeader() {
             )}
           </ul>
         </nav>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 md:gap-3">
+          <NotificationsMenu />
           <ThemeSwitch />
           <UserMenu />
         </div>

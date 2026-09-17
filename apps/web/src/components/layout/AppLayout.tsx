@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router';
 
 import { AppHeader } from './AppHeader';
+import { BottomNav } from './BottomNav';
 
 export function AppLayout() {
   return (
@@ -12,9 +13,14 @@ export function AppLayout() {
         Pular para o conteúdo
       </a>
       <AppHeader />
-      <main id="conteudo" tabIndex={-1} className="flex-1 px-4 py-6 outline-none md:px-6">
+      <main
+        id="conteudo"
+        tabIndex={-1}
+        className="flex-1 px-4 pt-6 pb-20 outline-none md:px-6 md:pb-6"
+      >
         <Outlet />
       </main>
+      <BottomNav />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   passwordResetLinkResponseSchema,
   workspaceResponseSchema,
   type AdminUser,
+  type AnonymizeUserRequest,
   type AuthSessionResponse,
   type CreateInviteRequest,
   type Role,
@@ -15,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '../../lib/api-client';
 import { sessionQueryKey } from '../auth/auth-api';
+import { usersQueryKey } from '../users/users-api';
 
 export const adminUsersQueryKey = ['admin-users'] as const;
 export const adminInvitesQueryKey = ['admin-invites'] as const;
@@ -55,6 +57,24 @@ export function useSetUserActive() {
         schema: adminUserResponseSchema,
       }),
     onSuccess: ({ user }) => replace(user),
+  });
+}
+
+/** Irreversível: nome vira "Usuário removido" e o e-mail é apagado (nomes em cache são relidos). */
+export function useAnonymizeUser() {
+  const replace = useReplaceAdminUser();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api.post(
+        `/api/admin/users/${userId}/anonymize`,
+        { confirm: true } satisfies AnonymizeUserRequest,
+        { schema: adminUserResponseSchema },
+      ),
+    onSuccess: ({ user }) => {
+      replace(user);
+      void queryClient.invalidateQueries({ queryKey: usersQueryKey });
+    },
   });
 }
 

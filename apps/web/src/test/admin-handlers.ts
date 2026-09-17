@@ -1,6 +1,8 @@
 import {
   acceptInviteRequestSchema,
   adminUserResponseSchema,
+  ANONYMIZED_USER_NAME,
+  anonymizeUserRequestSchema,
   adminUsersResponseSchema,
   authSessionResponseSchema,
   changePasswordRequestSchema,
@@ -157,9 +159,16 @@ export const adminHandlers = [
   }),
 
   http.post('/api/admin/users/:userId/:action', async ({ request, params }) => {
-    await readBody(request, String(params.action));
+    const body = await readBody(request, String(params.action));
     const user = findUser(params.userId);
     if (!user) return apiErrorResponse('NOT_FOUND');
+    if (params.action === 'anonymize') {
+      const parsed = anonymizeUserRequestSchema.safeParse(body);
+      if (!parsed.success) return validationError(parsed.error);
+      if (user.id === sessionFixture.user.id) return apiErrorResponse('CANNOT_TARGET_SELF');
+      if (user.status !== 'deactivated') return apiErrorResponse('USER_NOT_DEACTIVATED');
+      return replaceUser({ ...user, name: ANONYMIZED_USER_NAME, email: null, anonymized: true });
+    }
     if (params.action === 'deactivate') {
       if (user.id === sessionFixture.user.id) return apiErrorResponse('CANNOT_TARGET_SELF');
       return replaceUser({ ...user, status: 'deactivated' });

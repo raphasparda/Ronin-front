@@ -55,7 +55,7 @@ import { useCardFaceData } from '../cards/card-face-data';
 import { CardFaceOverlay, type CardFaceActions } from '../cards/CardFace';
 import { useCreateCard, useSetCardPriority, type CreateCardVariables } from '../cards/cards-api';
 import { MoveCardDialog } from '../cards/MoveCardDialog';
-import { useCardArchiving, useCardMover } from '../cards/use-card-actions';
+import { useCardArchiving, useCardCompletionAction, useCardMover } from '../cards/use-card-actions';
 import { AddListForm } from './AddListForm';
 import { useBoardErrorHandler } from './board-errors';
 import {
@@ -180,6 +180,7 @@ export function BoardLists({
   const mover = useCardMover(boardId);
   const archiving = useCardArchiving(boardId);
   const setPriority = useSetCardPriority(boardId);
+  const completion = useCardCompletionAction();
   const { now } = useCardFaceData();
   const [movingCard, setMovingCard] = useState<CardSummary | null>(null);
   const [dragOrder, setDragOrder] = useState<CardOrder | null>(null);
@@ -318,6 +319,16 @@ export function BoardLists({
         { cardId: card.id, priority },
         { onError: (error) => handleError(error, CARD_MESSAGES.priorityFailed) },
       );
+    },
+    onToggleComplete: (card) => {
+      const list = lists.find((item) => item.id === card.listId);
+      completion.run({
+        card,
+        action: card.status === 'completed' ? 'reopen' : 'complete',
+        list: list ? { name: list.name, isDoneList: list.isDoneList } : null,
+        source: 'board',
+        announce,
+      });
     },
     isClickSuppressed,
   };

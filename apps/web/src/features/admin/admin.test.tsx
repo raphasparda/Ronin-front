@@ -1,10 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
 import { getToasts } from '../../components/ui/toast-store';
 import { requestsTo, TOKEN } from '../../test/admin-handlers';
-import { authHandlers, sessionFixture } from '../../test/auth-handlers';
+import { apiErrorResponse, authHandlers, sessionFixture } from '../../test/auth-handlers';
 import { renderApp } from '../../test/render';
 import { server } from '../../test/server';
 
@@ -273,5 +274,70 @@ describe('/admin/workspace', () => {
 
     await waitFor(() => expect(name).toHaveAccessibleDescription('Informe o nome da equipe.'));
     expect(requestsTo('workspace')).toEqual([]);
+  });
+});
+
+describe('Anonimizar membro (A5, LGPD)', () => {
+  it('só aparece para desativados e exige digitar o nome certo', async () => {
+    const user = userEvent.setup();
+    renderApp('/admin/membros');
+
+    await user.click(await screen.findByRole('button', { name: 'Ações para Bruno Lima' }));
+    expect(screen.queryByRole('menuitem', { name: 'Anonimizar…' })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Ações para Carla Dias' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Anonimizar…' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Anonimizar Carla Dias?' });
+    expect(dialog).toHaveTextContent('Não dá para desfazer.');
+    const confirm = within(dialog).getByRole('button', { name: 'Anonimizar conta' });
+    const field = within(dialog).getByRole('textbox', { name: 'Nome da pessoa' });
+    expect(field).toHaveFocus();
+    expect(confirm).toBeDisabled();
+
+    await user.type(field, 'Carla{Enter}');
+    expect(confirm).toBeDisabled();
+    expect(requestsTo('anonymize')).toEqual([]);
+
+    await user.type(field, ' Dias');
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+
+    await waitFor(() =>
+      expect(toastMessages()).toContain(
+        'A conta foi anonimizada. O nome agora aparece como "Usuário removido".',
+      ),
+    );
+    expect(requestsTo('anonymize').map((item) => item.body)).toEqual([{ confirm: true }]);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Carla Dias')).not.toBeInTheDocument();
+    const rows = screen.getAllByText('Usuário removido').map((item) => item.closest('li'));
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(within(row as HTMLElement).getByText('Anonimizado')).toBeVisible();
+      expect(
+        within(row as HTMLElement).queryByRole('button', { name: /Ações para/ }),
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('409 USER_NOT_DEACTIVATED explica o que fazer', async () => {
+    server.use(
+      http.post('/api/admin/users/:userId/anonymize', () =>
+        apiErrorResponse('USER_NOT_DEACTIVATED'),
+      ),
+    );
+    const user = userEvent.setup();
+    renderApp('/admin/membros');
+
+    await user.click(await screen.findByRole('button', { name: 'Ações para Carla Dias' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Anonimizar…' }));
+    const dialog = screen.getByRole('dialog', { name: 'Anonimizar Carla Dias?' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Nome da pessoa' }), 'Carla Dias');
+    await user.click(within(dialog).getByRole('button', { name: 'Anonimizar conta' }));
+
+    await waitFor(() => expect(toastMessages()).toContain('Desative a conta antes de anonimizar.'));
+    expect(within(memberRow('Carla Dias')).getByText('Desativado')).toBeVisible();
   });
 });

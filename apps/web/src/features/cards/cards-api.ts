@@ -52,7 +52,7 @@ export function toCardSummary(card: CardDetail): CardSummary {
   return cardSummarySchema.parse(card);
 }
 
-function keyBetween(before: string | null, after: string | null): string | null {
+export function keyBetween(before: string | null, after: string | null): string | null {
   try {
     return generateKeyBetween(before, after);
   } catch {
@@ -135,7 +135,12 @@ export function moveCardInPayload(
   };
 }
 
-function mergeSummary(detail: CardDetail, card: CardSummary, payload?: BoardPayload): CardDetail {
+/** Face atualizada aplicada ao detalhe, com a lista do payload do quadro quando disponível. */
+export function mergeSummary(
+  detail: CardDetail,
+  card: CardSummary,
+  payload?: BoardPayload,
+): CardDetail {
   const list = payload?.lists.find((item) => item.id === card.listId);
   return {
     ...detail,
@@ -166,11 +171,14 @@ export function setCardDetail(
 // Leitura
 // ---------------------------------------------------------------------------
 
+export async function fetchCard(cardId: string, signal?: AbortSignal): Promise<CardDetail> {
+  return (await api.get(`/api/cards/${cardId}`, { schema: cardDetailResponseSchema, signal })).card;
+}
+
 export function useCard(cardId: string) {
   return useQuery({
     queryKey: cardQueryKey(cardId),
-    queryFn: async ({ signal }) =>
-      (await api.get(`/api/cards/${cardId}`, { schema: cardDetailResponseSchema, signal })).card,
+    queryFn: ({ signal }) => fetchCard(cardId, signal),
     refetchInterval: CARD_POLL_INTERVAL_MS,
     meta: { silentErrors: true },
   });

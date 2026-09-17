@@ -33,6 +33,7 @@ import { useBoardErrorHandler } from '../boards/board-errors';
 import { useBoard } from '../boards/boards-api';
 import { CardActivity } from './CardActivity';
 import { CardChecklists } from './CardChecklists';
+import { CardCompletion } from './CardCompletion';
 import { CardComments } from './CardComments';
 import { CardDescription, DiscardDescriptionDialog } from './CardDescription';
 import { CardAssigneesField, CardDueField, CardLabelsField, CardPriorityField } from './CardFields';
@@ -271,7 +272,7 @@ function CardDetailView({ card, onClose }: CardDetailViewProps) {
 
           <div className="grid gap-6 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_16.25rem]">
             <div className="flex min-w-0 flex-col gap-6">
-              {/* Fatia 8: bloco Concluir/Reabrir (screens §8.3), acima da descrição. */}
+              <CardCompletion card={card} readOnly={readOnly} announce={announce} />
               <CardDescription
                 card={card}
                 readOnly={readOnly}

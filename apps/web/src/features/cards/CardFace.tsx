@@ -12,11 +12,13 @@ import {
   AlignLeft,
   Archive,
   ArrowRightLeft,
+  Check,
   ExternalLink,
   ListChecks,
   LoaderCircle,
   MessageSquare,
   MoreHorizontal,
+  RotateCcw,
 } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent, PointerEventHandler, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -36,6 +38,7 @@ export interface CardFaceActions {
   onMove: (card: CardSummary) => void;
   onArchive: (card: CardSummary) => void;
   onPriority: (card: CardSummary, priority: CardPriority | null) => void;
+  onToggleComplete: (card: CardSummary) => void;
   /** `true` logo após soltar um arraste: o clique que encerra o arraste não abre o card. */
   isClickSuppressed: () => boolean;
 }
@@ -229,6 +232,12 @@ export function CardFace({ card, color, readOnly, pending, actions }: CardFacePr
           </MenuItem>
           <MenuItem icon={<ArrowRightLeft size={16} />} onSelect={() => actions.onMove(card)}>
             Mover para…
+          </MenuItem>
+          <MenuItem
+            icon={card.status === 'completed' ? <RotateCcw size={16} /> : <Check size={16} />}
+            onSelect={() => actions.onToggleComplete(card)}
+          >
+            {card.status === 'completed' ? 'Reabrir' : 'Concluir'}
           </MenuItem>
           <MenuItem icon={<Archive size={16} />} onSelect={() => actions.onArchive(card)}>
             Arquivar

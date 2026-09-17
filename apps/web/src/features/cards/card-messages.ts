@@ -27,7 +27,15 @@ export const CARD_MESSAGES = {
         : ''
     }`,
   completed: 'Card concluído.',
+  completedMoved: (listName: string) => `Card concluído e movido para ${listName}.`,
   reopened: 'Card reaberto.',
+  reopenedMoved: (listName: string) => `Card reaberto e movido para o topo de ${listName}.`,
+  reopenedStayed: (listName: string) =>
+    `Card reaberto. Ele continua em ${listName} porque o quadro não tem outra lista.`,
+  completeFailed: 'Não foi possível concluir o card. Tente de novo.',
+  reopenFailed: 'Não foi possível reabrir o card. Tente de novo.',
+  completionArchived: 'Este card foi arquivado. Restaure o card para concluir ou reabrir.',
+  completedBy: (name: string, when: string) => `por ${name} em ${when}`,
   archived: 'Card arquivado.',
   archiveFailed: 'Não foi possível arquivar o card. Tente de novo.',
   restored: (listName: string) => `Card restaurado no fim de ${listName}.`,
