@@ -152,6 +152,7 @@ export function LoginPage() {
 
   return (
     <AuthLayout
+      variant="login"
       title="Entrar"
       footer={
         <p className="text-muted">
