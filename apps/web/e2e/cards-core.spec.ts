@@ -6,7 +6,6 @@ import {
   cardDialog,
   cardFace,
   cardTitlesOf,
-  closeCard,
   DAY_MS,
   dragWithMouse,
   listColumn,
@@ -105,8 +104,9 @@ test('card: criação rápida → detalhe → editar → arrastar → "Mover par
     await renamed.getByRole('button', { name: 'Salvar prazo' }).click();
     await expect(renamed.getByRole('button', { name: 'Alterar prazo' })).toBeVisible();
 
-    // Esc não serve aqui: depois de salvar o prazo o foco sai do diálogo (integration-bugs.spec.ts).
-    await closeCard(renamed);
+    // Depois de salvar o prazo o foco continua no diálogo: Esc fecha.
+    await page.keyboard.press('Escape');
+    await expect(renamed).toBeHidden();
     const card = (await api.board(produto.board.id)).cards.find((item) => item.id === cardId);
     expect(card).toMatchObject({ title: 'Publicar release notes', labelIds: [bug.id] });
     expect(card?.dueAt).not.toBeNull();
@@ -188,8 +188,10 @@ test('card: criação rápida → detalhe → editar → arrastar → "Mover par
     await dialog.getByRole('button', { name: 'Restaurar', exact: true }).click();
     await expect(toast(page, 'Card restaurado no fim de A fazer.')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Concluir' })).toBeVisible();
-    // Fecha pelo botão: o "Restaurar" some ao restaurar e o foco cai no <body> (bug de foco).
-    await closeCard(dialog);
+    // O "Restaurar" some ao restaurar; o foco fica no diálogo e Esc fecha.
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
 
     await openBoard(page, marketing.board.id, 'Marketing');
     await page.getByRole('button', { name: 'Ações do card Publicar release notes' }).click();

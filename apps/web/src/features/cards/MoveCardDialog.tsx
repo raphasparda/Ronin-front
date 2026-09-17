@@ -1,6 +1,5 @@
 import {
   completionChangeOnMove,
-  placementForPosition,
   sortByPosition,
   type BoardPayload,
   type CardSummary,
@@ -13,7 +12,8 @@ import { Dialog } from '../../components/ui/Dialog';
 import { Pill } from '../../components/ui/Pill';
 import { Select } from '../../components/ui/Select';
 import { useBoard, useBoards } from '../boards/boards-api';
-import { cardsInList, type MoveCardVariables } from './cards-api';
+import { placementAtPosition } from './card-drag';
+import { cardsInList, usePendingCardIds, type MoveCardVariables } from './cards-api';
 
 function joinNames(names: readonly string[]): string {
   if (names.length <= 1) return names[0] ?? '';
@@ -51,6 +51,7 @@ function MoveCardForm({ card, source, onMove, onClose }: MoveCardFormProps) {
   const crossBoard = boardId !== source.board.id;
   const targetQuery = useBoard(boardId, { paused: true });
   const target = crossBoard ? targetQuery.data : source;
+  const pendingIds = usePendingCardIds(boardId);
 
   const boardOptions = (boards.data ?? [source.board])
     .filter((board) => board.archivedAt === null)
@@ -95,9 +96,11 @@ function MoveCardForm({ card, source, onMove, onClose }: MoveCardFormProps) {
       card,
       toBoard: { id: boardId, name: targetBoardName },
       toList: { id: targetList.id, name: targetList.name },
-      placement: placementForPosition(
+      placement: placementAtPosition(
         siblings.map((item) => item.id),
         chosenPosition,
+        card.id,
+        pendingIds,
       ),
       position: chosenPosition,
       source: 'dialog',

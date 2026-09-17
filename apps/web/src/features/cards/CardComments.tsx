@@ -5,22 +5,17 @@ import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'rea
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Markdown } from '../../components/ui/Markdown';
-import { toast } from '../../components/ui/toast-store';
 import { formatRelativeTime, formatShortDateTime } from '../../lib/dates';
 import { useNow } from '../../lib/use-now';
 import { useSession, useSessionUser } from '../auth/auth-api';
 import { useBoardErrorHandler } from '../boards/board-errors';
 import { displayName, useUsers } from '../users/users-api';
-import { useCreateComment, useDeleteComment, useUpdateComment } from './comments-api';
-
-export const COMMENT_MESSAGES = {
-  empty: 'O comentário não pode ficar vazio.',
-  tooLong: 'O comentário pode ter no máximo 10.000 caracteres.',
-  createFailed: 'Não foi possível enviar o comentário. Tente de novo.',
-  updateFailed: 'Não foi possível salvar o comentário. Tente de novo.',
-  deleteFailed: 'Não foi possível excluir o comentário. Tente de novo.',
-  deleted: 'Comentário excluído.',
-} as const;
+import {
+  COMMENT_MESSAGES,
+  useCreateComment,
+  useDeleteComment,
+  useUpdateComment,
+} from './comments-api';
 
 const HINT = 'Markdown: **negrito**, - lista, [link](https://…). Ctrl+Enter envia.';
 
@@ -141,7 +136,7 @@ function CommentItem({ comment, cardId, boardId, readOnly }: CommentItemProps) {
   const timeZone = useSession({ enabled: false }).data?.workspace.timezone;
   const now = useNow();
   const update = useUpdateComment(cardId);
-  const remove = useDeleteComment(cardId);
+  const remove = useDeleteComment(cardId, boardId);
   const handleError = useBoardErrorHandler(boardId);
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -166,10 +161,7 @@ function CommentItem({ comment, cardId, boardId, readOnly }: CommentItemProps) {
 
   const confirmDelete = () => {
     setConfirming(false);
-    remove.mutate(comment.id, {
-      onSuccess: () => toast.success(COMMENT_MESSAGES.deleted),
-      onError: (error) => handleError(error, COMMENT_MESSAGES.deleteFailed),
-    });
+    remove.mutate(comment.id);
   };
 
   return (

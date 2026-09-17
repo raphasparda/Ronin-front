@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   moveAcrossLists,
   placementAmongVisible,
+  placementAtPosition,
   resolveCardDrop,
   type CardOrder,
 } from './card-drag';
@@ -62,6 +63,18 @@ describe('arrastar cards', () => {
   it('voltar ao mesmo lugar não gera movimento', () => {
     expect(resolveCardDrop(original, original, 'b', { type: 'card', id: 'b' })).toBeNull();
     expect(resolveCardDrop(original, original, 'b', null)).toBeNull();
+  });
+
+  it('"Mover para…": a posição conta cards sendo criados, mas o placement os ignora', () => {
+    const pending = new Set(['tmp1']);
+    expect(placementAtPosition(['a', 'b', 'tmp1'], 4, 'x', pending)).toEqual({ type: 'end' });
+    expect(placementAtPosition(['a', 'b', 'tmp1'], 3, 'x', pending)).toEqual({ type: 'end' });
+    expect(placementAtPosition(['a', 'tmp1', 'b'], 3, 'x', pending)).toEqual({
+      type: 'after',
+      id: 'a',
+    });
+    expect(placementAtPosition(['tmp1', 'a'], 2, 'x', pending)).toEqual({ type: 'start' });
+    expect(placementAtPosition(['a', 'b'], 2, 'x')).toEqual({ type: 'after', id: 'a' });
   });
 
   it('cards ainda sendo criados (id temporário) nunca viram vizinho do placement', () => {

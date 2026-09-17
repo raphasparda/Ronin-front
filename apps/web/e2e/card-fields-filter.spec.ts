@@ -19,7 +19,6 @@ import {
 
 async function toggleFilter(page: Page, menu: string, option: string): Promise<void> {
   const bar = page.getByRole('search', { name: 'Filtros do quadro' });
-  // "Limpar" esconde a barra quando ela estava aberta só por causa do filtro da URL.
   if (!(await bar.isVisible())) await page.getByRole('button', { name: /^Filtros/ }).click();
   await bar.getByRole('button', { name: new RegExp(`^${menu}`) }).click();
   const panel = page.getByRole('group', { name: `Filtrar por ${menu.toLowerCase()}` });
@@ -28,9 +27,11 @@ async function toggleFilter(page: Page, menu: string, option: string): Promise<v
   await expect(panel).toBeHidden();
 }
 
+/** "Limpar" mantém a barra aberta, mesmo quando ela abriu só pelo filtro da URL. */
 async function clearFilters(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Limpar', exact: true }).click();
   await expect(page.getByText('Filtro ativo')).toBeHidden();
+  await expect(page.getByRole('search', { name: 'Filtros do quadro' })).toBeVisible();
 }
 
 const ALL = ['Atrasado urgente', 'Vencendo baixa', 'Sem prazo nenhum'];

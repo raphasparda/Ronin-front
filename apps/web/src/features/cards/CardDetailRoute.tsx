@@ -57,16 +57,25 @@ const PANEL_CLASS = 'sm:max-w-[52.5rem]';
 
 function CloseButton({ onClose }: { onClose: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClose}
-      className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 font-medium text-text hover:bg-hover sm:w-8 sm:px-0 sm:text-muted md:h-8"
-    >
-      <ArrowLeft aria-hidden size={18} className="sm:hidden" />
-      <span className="sm:hidden">Voltar</span>
-      <X aria-hidden size={18} className="hidden sm:block" />
-      <span className="hidden sm:sr-only">Fechar</span>
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={onClose}
+        className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 font-medium text-text hover:bg-hover sm:hidden"
+      >
+        <ArrowLeft aria-hidden size={18} />
+        Voltar
+      </button>
+      <button
+        type="button"
+        aria-label="Fechar"
+        title="Fechar"
+        onClick={onClose}
+        className="hidden h-10 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-text sm:inline-flex md:h-8"
+      >
+        <X aria-hidden size={18} />
+      </button>
+    </>
   );
 }
 
@@ -138,6 +147,7 @@ function CardDetailView({ card, onClose }: CardDetailViewProps) {
         onClose={requestClose}
         labelledBy={titleId}
         getInitialFocus={() => headingRef.current}
+        getFallbackFocus={() => headingRef.current}
         className={PANEL_CLASS}
       >
         <header className="flex items-center gap-2 border-b border-border px-3 py-2 sm:px-5 sm:py-3">

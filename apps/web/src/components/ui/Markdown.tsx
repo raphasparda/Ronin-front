@@ -44,12 +44,12 @@ const COMPONENTS: Components = {
     <code className="rounded-sm bg-surface-sunken px-1 font-mono text-[0.9em]">{children}</code>
   ),
   pre: ({ children }) => (
-    <pre className="overflow-x-auto rounded-md bg-surface-sunken p-3 font-mono text-sm [&_code]:bg-transparent [&_code]:p-0">
+    <pre className="relative overflow-x-auto rounded-md bg-surface-sunken p-3 font-mono text-sm [&_code]:bg-transparent [&_code]:p-0">
       {children}
     </pre>
   ),
   table: ({ children }) => (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="border-collapse text-sm [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1">
         {children}
       </table>

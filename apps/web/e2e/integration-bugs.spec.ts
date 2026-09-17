@@ -1,30 +1,19 @@
-// Regressões dos bugs encontrados na integração (web + API reais). Cada teste descreve o
-// comportamento esperado e está marcado com `test.fail()` enquanto o bug existir (rode com
-// `E2E_SHOW_BUGS=1` para ver a falha real). Quando a correção entrar, o Playwright acusa "passou inesperadamente" e o `test.fail()` deve sair.
+// Regressões dos bugs encontrados na integração (web + API reais), já corrigidos. Cada teste
+// reproduz o cenário original e confere o comportamento esperado.
 import { cardIdsInList, listByName } from './support/api';
-import { applyMobileOverflowWorkaround, expect, signIn, test } from './support/fixtures';
+import { expect, signIn, test } from './support/fixtures';
 import { ANA, BRUNO, CARLA, seedTeam } from './support/seed';
 import { cardDialog, DAY_MS, localDue, toast } from './support/ui';
 
-/** `E2E_SHOW_BUGS=1` roda sem `test.fail()` para ver o erro real de cada bug. */
-const KNOWN_BUG = process.env.E2E_SHOW_BUGS !== '1';
-
-test.describe('sem contorno', () => {
-  test.use({ mobileOverflowWorkaround: false });
-
+test.describe('mobile', () => {
   test('mobile: quadro com 3 listas cabe na largura do celular (sem zoom-out da página)', async ({
     page,
     apiAs,
     isMobile,
   }) => {
     test.skip(!isMobile, 'Só com viewport de celular.');
-    // BUG: os `sr-only` (position: absolute) do cabeçalho da lista, "(lista de conclusão)" e
-    // " cards" (src/features/boards/ListColumn.tsx:142 e :147), não têm ancestral posicionado dentro
-    // do contêiner com overflow-x (BoardLists.tsx:733). Eles escapam do recorte e alargam o
-    // documento para ~1089 px; o Chrome mobile reduz a página inteira (o detalhe do card, que é
-    // `fixed inset-0`, também fica com 1089 px e o conteúdo sai da tela). Com
-    // `section { position: relative }` a largura volta a 412 px.
-    test.fail(KNOWN_BUG);
+    // Os `sr-only` (position: absolute) do cabeçalho da lista escapavam do contêiner com overflow-x
+    // por não terem ancestral posicionado, e o documento ficava com ~1089 px (página reduzida).
     const team = await seedTeam({ ana: ANA });
     const api = await apiAs(team.ana);
     const { board } = await api.createBoard('Largura');
@@ -44,13 +33,7 @@ test.describe('sem contorno', () => {
     isMobile,
   }) => {
     test.skip(!isMobile, 'Só com viewport de celular.');
-    // BUG: o painel do Popover (src/components/ui/Popover.tsx:81) é `fixed` em `rect.bottom + 8`,
-    // sem ajustar para caber na tela, e fecha em qualquer `scroll` fora dele (Popover.tsx:56-62).
-    // No detalhe em tela cheia o botão fica no fim do conteúdo: as pessoas ficam abaixo da tela e
-    // rolar fecha o painel. Só dá para atribuir outra pessoa pelo teclado. Independe do bug de
-    // largura acima (com a largura corrigida por CSS, o toque continua falhando).
-    await applyMobileOverflowWorkaround(page);
-    test.fail(KNOWN_BUG);
+    // O painel abria abaixo da tela (sem ajustar à viewport) e fechava em qualquer rolagem.
     const team = await seedTeam({ ana: ANA, bruno: BRUNO, carla: CARLA });
     const api = await apiAs(team.ana);
     const { board, lists } = await api.createBoard('Mobile');
@@ -60,8 +43,25 @@ test.describe('sem contorno', () => {
     const dialog = cardDialog(page, 'Card no celular');
     await dialog.getByRole('button', { name: 'Adicionar', exact: true }).tap();
     const picker = page.getByRole('group', { name: 'Adicionar responsável' });
+    const panel = await picker.boundingBox();
+    const viewport = page.viewportSize();
+    expect(panel && viewport).toBeTruthy();
+    if (panel && viewport) {
+      expect(panel.y).toBeGreaterThanOrEqual(0);
+      expect(panel.y + panel.height).toBeLessThanOrEqual(viewport.height);
+    }
     await picker.getByRole('checkbox', { name: 'Carla Costa' }).tap({ timeout: 5_000 });
     await expect(dialog.getByRole('button', { name: 'Remover Carla Costa' })).toBeVisible();
+    // Rolar o detalhe não fecha o painel: ele acompanha o botão.
+    await dialog
+      .locator('.overflow-y-auto')
+      .first()
+      .evaluate((element) => {
+        element.scrollTop -= 40;
+      });
+    await expect(picker).toBeVisible();
+    await picker.getByRole('checkbox', { name: 'Bruno Membro' }).tap({ timeout: 5_000 });
+    await expect(dialog.getByRole('button', { name: 'Remover Bruno Membro' })).toBeVisible();
   });
 });
 
@@ -69,10 +69,7 @@ test('detalhe do card: depois de "Salvar prazo" o foco continua no diálogo e Es
   page,
   apiAs,
 }) => {
-  // BUG: ao salvar (ou cancelar) o prazo, o formulário é desmontado sem devolver o foco
-  // (src/features/cards/CardFields.tsx:279, setEditing(false)); o foco cai no <body>, fora do
-  // diálogo, então Esc não fecha o detalhe e o Tab sai do foco preso (Dialog.tsx:942-965).
-  test.fail(KNOWN_BUG);
+  // O formulário do prazo desmontava com o foco dentro; o foco caía no <body> e Esc não fechava.
   const team = await seedTeam({ ana: ANA });
   const api = await apiAs(team.ana);
   const { board, lists } = await api.createBoard('Foco');
@@ -95,10 +92,7 @@ test('detalhe do card: botão de fechar tem nome acessível no desktop', async (
   isMobile,
 }) => {
   test.skip(isMobile, 'No mobile o botão se chama "Voltar" e funciona.');
-  // BUG: o texto "Fechar" usa `hidden sm:sr-only` (src/features/cards/CardDetailRoute.tsx:68):
-  // `hidden` (display: none) continua valendo a partir de `sm`, e "Voltar" é `sm:hidden`. No
-  // desktop o botão só tem o ícone `aria-hidden`: fica sem nome para leitor de tela (WCAG 4.1.2).
-  test.fail(KNOWN_BUG);
+  // O texto "Fechar" usava `hidden sm:sr-only` e ficava com display: none também no desktop.
   const team = await seedTeam({ ana: ANA });
   const api = await apiAs(team.ana);
   const { board, lists } = await api.createBoard('Fechar');
@@ -115,11 +109,8 @@ test('comentário: excluir mostra "Comentário excluído." (e avisaria se falhas
   page,
   apiAs,
 }) => {
-  // BUG: a exclusão é otimista (src/features/cards/comments-api.ts:76-81) e tira o comentário da
-  // lista antes da resposta; o CommentItem desmonta e os callbacks passados ao `mutate()`
-  // (CardComments.tsx:771-774, toast de sucesso e `handleError`) não rodam. Não há confirmação
-  // e, se a API falhar, o comentário volta sem nenhuma mensagem de erro.
-  test.fail(KNOWN_BUG);
+  // A exclusão otimista desmontava o comentário antes dos callbacks do `mutate()`: sem toast de
+  // sucesso nem de erro.
   const team = await seedTeam({ ana: ANA });
   const api = await apiAs(team.ana);
   const { board, lists } = await api.createBoard('Comentários');
@@ -141,11 +132,8 @@ test('Meus cards: "Desfazer" a conclusão devolve o card à posição de antes n
   page,
   apiAs,
 }) => {
-  // BUG: `moveBack` (src/features/cards/use-card-actions.ts:718) considera o card "de volta" só
-  // porque a lista é a mesma. O reopen do servidor põe o card no TOPO da primeira lista; quando essa
-  // já era a lista original, o card fica no topo em vez de voltar ao lugar de antes, apesar do
-  // toast "Conclusão desfeita. O card voltou para A fazer.".
-  test.fail(KNOWN_BUG);
+  // O reopen põe o card no topo da primeira lista; quando essa já era a lista original, o
+  // "Desfazer" o deixava no topo.
   const team = await seedTeam({ ana: ANA });
   const api = await apiAs(team.ana);
   const { board, lists } = await api.createBoard('Desfazer');

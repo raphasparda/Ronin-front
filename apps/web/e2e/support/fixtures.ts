@@ -74,27 +74,7 @@ export async function signIn(context: BrowserContext, user: SeededUser): Promise
   ]);
 }
 
-/**
- * CONTORNO do bug "página do quadro mais larga que o celular" (integration-bugs.spec.ts):
- * sem ele, no projeto mobile a página inteira fica com ~1089 px e os cliques no detalhe do card
- * caem em outros elementos, o que esconderia todo o resto dos fluxos. O teste do bug roda sem o
- * contorno (`mobileOverflowWorkaround: false`) e continua falhando até a correção.
- */
-export async function applyMobileOverflowWorkaround(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const style = () => {
-      const tag = document.createElement('style');
-      tag.dataset.e2eWorkaround = 'mobile-overflow';
-      tag.textContent = 'ol[aria-label="Listas do quadro"] section { position: relative; }';
-      document.head.appendChild(tag);
-    };
-    if (document.head) style();
-    else document.addEventListener('DOMContentLoaded', style);
-  });
-}
-
 interface Fixtures {
-  mobileOverflowWorkaround: boolean;
   browserErrors: BrowserErrors;
   /** Abre um contexto novo (outro navegador) logado como `user`, ou anônimo com `null`. */
   openAs: (user: SeededUser | null, options?: { theme?: Theme }) => Promise<Page>;
@@ -103,11 +83,8 @@ interface Fixtures {
 }
 
 export const test = base.extend<Fixtures>({
-  mobileOverflowWorkaround: [true, { option: true }],
-
   browserErrors: [
-    async ({ page, isMobile, mobileOverflowWorkaround }, use) => {
-      if (isMobile && mobileOverflowWorkaround) await applyMobileOverflowWorkaround(page);
+    async ({ page }, use) => {
       const errors = new BrowserErrors();
       errors.watch(page, 'page');
       await use(errors);
@@ -116,13 +93,11 @@ export const test = base.extend<Fixtures>({
     { auto: true },
   ],
 
-  openAs: async ({ browser, browserErrors, isMobile, mobileOverflowWorkaround }, use, testInfo) => {
+  openAs: async ({ browser, browserErrors }, use, testInfo) => {
     const contexts: BrowserContext[] = [];
-    await use(async (user, options) => {
-      const page = await openContext(browser, testInfo, contexts, browserErrors, user, options);
-      if (isMobile && mobileOverflowWorkaround) await applyMobileOverflowWorkaround(page);
-      return page;
-    });
+    await use((user, options) =>
+      openContext(browser, testInfo, contexts, browserErrors, user, options),
+    );
     await Promise.all(contexts.map((context) => context.close()));
   },
 

@@ -43,7 +43,7 @@ export function AdminLayout() {
       <h1 className="text-xl">Administração</h1>
       <nav
         aria-label="Administração"
-        className="-mx-4 overflow-x-auto border-b border-border px-4 md:mx-0 md:px-0"
+        className="relative -mx-4 overflow-x-auto border-b border-border px-4 md:mx-0 md:px-0"
       >
         <ul className="flex gap-5">
           {TABS.map((tab) => (

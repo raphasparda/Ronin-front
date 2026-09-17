@@ -154,6 +154,31 @@ describe('Meus cards (/meus-cards)', () => {
     expect(await screen.findByRole('link', { name: /^Primeiro/ })).toBeVisible();
   });
 
+  it('"Desfazer" devolve o card ao lugar de antes mesmo quando o reopen o põe no topo da mesma lista', async () => {
+    const cima = addCard('Cima', { dueAt: null, position: 'a0' });
+    const meio = addCard('Meio', { dueAt: null, position: 'a1' });
+    addCard('Baixo', { dueAt: null, position: 'a2' });
+    const user = userEvent.setup();
+    renderApp('/meus-cards');
+
+    await user.click(await screen.findByRole('button', { name: 'Concluir Meio' }));
+    await waitFor(() => expect(toastMessages()).toContain('Card concluído.'));
+    await user.click(screen.getByRole('button', { name: 'Desfazer' }));
+
+    await waitFor(() =>
+      expect(toastMessages()).toContain('Conclusão desfeita. O card voltou para A fazer.'),
+    );
+    expect(boardRequests('cards/move').map((request) => request.body)).toEqual([
+      { toListId: LIST_IDS.todo, placement: { type: 'after', id: cima.id } },
+    ]);
+    const todo = boardDb.cards
+      .filter((card) => card.listId === LIST_IDS.todo)
+      .sort((a, b) => (a.position < b.position ? -1 : 1))
+      .map((card) => card.title);
+    expect(todo).toEqual(['Cima', 'Meio', 'Baixo']);
+    expect(boardDb.cards.find((card) => card.id === meio.id)).toMatchObject({ status: 'open' });
+  });
+
   it('erro ao concluir devolve a linha e avisa', async () => {
     server.use(http.post('/api/cards/:cardId/complete', () => apiErrorResponse('INTERNAL_ERROR')));
     addCard('Teimoso', { dueAt: null });

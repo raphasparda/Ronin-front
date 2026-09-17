@@ -35,7 +35,6 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
-import { useMutationState } from '@tanstack/react-query';
 import { useMemo, useRef, useState } from 'react';
 
 import { Button } from '../../components/ui/Button';
@@ -54,7 +53,7 @@ import {
 } from '../cards/card-drag';
 import { useCardFaceData } from '../cards/card-face-data';
 import { CardFaceOverlay, type CardFaceActions } from '../cards/CardFace';
-import { useCreateCard, useSetCardPriority, type CreateCardVariables } from '../cards/cards-api';
+import { useCreateCard, usePendingCardIds, useSetCardPriority } from '../cards/cards-api';
 import { MoveCardDialog } from '../cards/MoveCardDialog';
 import { useCardArchiving, useCardCompletionAction, useCardMover } from '../cards/use-card-actions';
 import { AddListForm } from './AddListForm';
@@ -191,16 +190,7 @@ export function BoardLists({
   const dragStartOrder = useRef<CardOrder | null>(null);
   const lastDragEnd = useRef(0);
 
-  const pendingKey = useMutationState({
-    filters: { mutationKey: ['create-card', boardId], status: 'pending' },
-    select: (mutation) => (mutation.state.variables as CreateCardVariables | undefined)?.tempId,
-  })
-    .filter((id): id is string => id !== undefined)
-    .join(',');
-  const pendingCardIds = useMemo(
-    () => new Set(pendingKey ? pendingKey.split(',') : []),
-    [pendingKey],
-  );
+  const pendingCardIds = usePendingCardIds(boardId);
 
   const cardsById = useMemo(
     () => new Map(payload.cards.map((card) => [card.id, card])),
@@ -491,7 +481,7 @@ export function BoardLists({
         }}
         onDragEnd={onDragEnd}
       >
-        <div className="-mx-4 flex scroll-px-4 snap-x snap-mandatory items-start gap-4 overflow-x-auto px-4 pb-4 sm:snap-none md:-mx-6 md:px-6">
+        <div className="relative -mx-4 flex scroll-px-4 snap-x snap-mandatory items-start gap-4 overflow-x-auto px-4 pb-4 sm:snap-none md:-mx-6 md:px-6">
           <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
             <ol aria-label="Listas do quadro" className="flex items-start gap-4">
               {lists.map((list, index) => (

@@ -2,7 +2,7 @@
 import { listByName } from './support/api';
 import { expect, signIn, test } from './support/fixtures';
 import { ANA, BRUNO, seedTeam } from './support/seed';
-import { cardFace, closeCard, openBoard, openCard, openMenu } from './support/ui';
+import { cardFace, closeCard, openBoard, openCard, openMenu, toast } from './support/ui';
 
 const XSS_COMMENT =
   'Olha isso: <script>window.__xss = 1</script> <img src="x" onerror="window.__xss = 2"> [clique](javascript:window.__xss=3)';
@@ -151,7 +151,7 @@ test('checklist completo não conclui o card; comentários com autor, edição, 
       .click();
     const confirm = anaDialog.getByRole('group', { name: 'Confirmar exclusão' });
     await confirm.getByRole('button', { name: 'Excluir', exact: true }).click();
-    // Sem conferir o toast "Comentário excluído.": ele não aparece (BUG em integration-bugs.spec.ts).
+    await expect(toast(ana, 'Comentário excluído.')).toBeVisible();
     await expect(comments.getByRole('article')).toHaveCount(2);
     await expect(comments).not.toContainText('falta a segunda');
   });

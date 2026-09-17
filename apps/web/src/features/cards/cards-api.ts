@@ -15,9 +15,15 @@ import {
   type Placement,
   type UpdateCardRequest,
 } from '@kanban/shared';
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { generateKeyBetween, generateNKeysBetween } from 'fractional-indexing';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { api, apiRequest } from '../../lib/api-client';
 import { dueInputToIso } from '../../lib/due';
@@ -228,6 +234,20 @@ export interface CreateCardVariables {
   listId: string;
   title: string;
   tempId: string;
+}
+
+/**
+ * Ids temporários dos cards ainda sendo criados no quadro: o servidor não os conhece, então nunca
+ * servem de vizinho num `placement`.
+ */
+export function usePendingCardIds(boardId: string): ReadonlySet<string> {
+  const pendingKey = useMutationState({
+    filters: { mutationKey: createCardMutationKey(boardId), status: 'pending' },
+    select: (mutation) => (mutation.state.variables as CreateCardVariables | undefined)?.tempId,
+  })
+    .filter((id): id is string => id !== undefined)
+    .join(',');
+  return useMemo(() => new Set(pendingKey ? pendingKey.split(',') : []), [pendingKey]);
 }
 
 export function useCreateCard(boardId: string) {

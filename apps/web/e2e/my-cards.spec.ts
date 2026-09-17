@@ -64,13 +64,13 @@ test('Meus cards: quatro grupos por prazo, ordem por prioridade, sem concluídos
       /Sem prazo/,
     ]);
     await expect(
-      page.getByRole('heading', { level: 2, name: /^Atrasados ?, 2 cards$/ }),
+      page.getByRole('heading', { level: 2, name: 'Atrasados, 2 cards', exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { level: 2, name: /^Vencendo \(24h\) ?, 1 card$/ }),
+      page.getByRole('heading', { level: 2, name: 'Vencendo (24h), 1 card', exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { level: 2, name: /^Sem prazo ?, 3 cards$/ }),
+      page.getByRole('heading', { level: 2, name: 'Sem prazo, 3 cards', exact: true }),
     ).toBeVisible();
   });
 
@@ -117,8 +117,7 @@ test('Meus cards: quatro grupos por prazo, ordem por prioridade, sem concluídos
     const payload = await api.board(ops.board.id);
     card = payload.cards.find((item) => item.id === meeting.id);
     expect(card).toMatchObject({ status: 'open', listId: todo.id });
-    // A posição original dentro da lista não volta (BUG em integration-bugs.spec.ts).
-    expect(cardIdsInList(payload, todo.id).sort()).toEqual([...orderBefore].sort());
+    expect(cardIdsInList(payload, todo.id)).toEqual(orderBefore);
   });
 
   await test.step('item abre o detalhe do card', async () => {

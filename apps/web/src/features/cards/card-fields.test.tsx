@@ -203,6 +203,14 @@ describe('Detalhe: responsáveis', () => {
     expect(boardRequests('cards/assignees/add').at(-1)?.method).toBe('PUT');
 
     await user.keyboard('{Escape}');
+    await user.click(within(dialog).getByRole('button', { name: 'Adicionar' }));
+    expect(
+      within(within(dialog).getByRole('group', { name: 'Adicionar responsável' })).getByRole(
+        'searchbox',
+        { name: 'Buscar pessoa' },
+      ),
+    ).toHaveValue('');
+    await user.keyboard('{Escape}');
     await user.click(within(dialog).getByRole('button', { name: 'Remover Ana Souza' }));
     await waitFor(() => expect(assigned).not.toHaveTextContent('Ana Souza'));
     expect(boardDb.cards.find((card) => card.id === CARD_IDS.campaign)?.assigneeIds).toEqual([

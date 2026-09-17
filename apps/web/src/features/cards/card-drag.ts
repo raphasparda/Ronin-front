@@ -76,6 +76,23 @@ export function placementAmongVisible(
 const NO_PENDING: ReadonlySet<string> = new Set();
 
 /**
+ * `placement` para pôr `cardId` na posição `position` (1..n+1) entre `siblingIds` (sem o card),
+ * como no "Mover para…". Cards ainda sendo criados (`pendingIds`) contam na posição exibida, mas
+ * nunca viram vizinho: o servidor não conhece o id temporário.
+ */
+export function placementAtPosition(
+  siblingIds: readonly string[],
+  position: number,
+  cardId: string,
+  pendingIds: ReadonlySet<string> = NO_PENDING,
+): Placement {
+  const order = siblingIds.filter((id) => id !== cardId);
+  order.splice(position - 1, 0, cardId);
+  const known = order.filter((id) => !pendingIds.has(id));
+  return placementForPosition(known, known.indexOf(cardId) + 1, cardId);
+}
+
+/**
  * Ao soltar: resolve lista e posição finais e converte em `placement`.
  * `null` quando o card voltou para o mesmo lugar (nada a enviar).
  * `fullOrder` (com filtro ativo) é a ordem completa das listas: `original` e `current` têm só os

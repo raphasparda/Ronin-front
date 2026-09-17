@@ -143,13 +143,23 @@ export function placementBefore(payload: BoardPayload, original: CardSummary): P
   return previous ? { type: 'after', id: previous.id } : { type: 'start' };
 }
 
-/** Move o card reaberto de volta para onde estava; `false` se não deu (fica onde o reopen pôs). */
-async function moveBack(
-  queryClient: QueryClient,
-  original: CardSummary,
-  reopened: CardSummary,
-): Promise<boolean> {
-  if (reopened.listId === original.listId) return true;
+/** O card já está no lugar indicado por `placement` (mesma lista e mesmo vizinho de cima). */
+function isAt(payload: BoardPayload, original: CardSummary, placement: Placement): boolean {
+  const current = payload.cards.find((card) => card.id === original.id);
+  if (!current || current.listId !== original.listId) return false;
+  const siblings = cardsInList(payload.cards, original.listId);
+  const index = siblings.findIndex((card) => card.id === original.id);
+  const above = siblings[index - 1];
+  return placement.type === 'start'
+    ? above === undefined
+    : placement.type === 'after' && above?.id === placement.id;
+}
+
+/**
+ * Move o card reaberto de volta para onde estava, inclusive dentro da mesma lista (o reopen pode
+ * tê-lo posto no topo); `false` se não deu (fica onde o reopen pôs).
+ */
+async function moveBack(queryClient: QueryClient, original: CardSummary): Promise<boolean> {
   try {
     const payload = await queryClient.fetchQuery({
       queryKey: boardQueryKey(original.boardId),
@@ -158,6 +168,7 @@ async function moveBack(
     });
     const placement = placementBefore(payload, original);
     if (!placement) return false;
+    if (isAt(payload, original, placement)) return true;
     await api.post(`/api/cards/${original.id}/move`, { toListId: original.listId, placement });
     return true;
   } catch {
@@ -193,7 +204,7 @@ async function completionMessage(
   { card, action, list, source, undo }: CompletionRequest,
   result: CardMutationResult,
 ): Promise<string> {
-  if (undo && (await moveBack(queryClient, undo.card, result.card))) {
+  if (undo && (await moveBack(queryClient, undo.card))) {
     return CARD_MESSAGES.completionUndone(undo.listName);
   }
   const moved = result.card.listId !== card.listId;

@@ -8,7 +8,8 @@ import {
   type ReactNode,
 } from 'react';
 
-const VIEWPORT_MARGIN = 16;
+import { useAnchoredPosition } from './use-anchored-position';
+
 const PANEL_WIDTH = 288;
 const FOCUSABLE =
   'input:not([disabled]), button:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
@@ -23,12 +24,15 @@ export interface PopoverProps {
   panelLabel: string;
   align?: 'left' | 'right';
   disabled?: boolean;
+  /** Chamado a cada abertura (ex.: limpar uma busca da abertura anterior). */
+  onOpen?: () => void;
   children: ReactNode;
 }
 
 /**
- * Painel não modal preso a um botão (filtros): abre com o foco no primeiro controle, Esc fecha e
- * devolve o foco, clicar fora ou sair com Tab fecha.
+ * Painel não modal preso a um botão (filtros, responsáveis): abre com o foco no primeiro controle,
+ * Esc fecha e devolve o foco, clicar fora ou sair com Tab fecha. Abre abaixo ou acima do botão,
+ * conforme o espaço, e acompanha a rolagem em vez de fechar.
  */
 export function Popover({
   trigger,
@@ -37,33 +41,38 @@ export function Popover({
   panelLabel,
   align = 'left',
   disabled = false,
+  onOpen,
   children,
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  const position = useAnchoredPosition({
+    open,
+    anchorRef: buttonRef,
+    panelRef,
+    width: PANEL_WIDTH,
+    align,
+  });
 
   useEffect(() => {
     if (!open) return;
     panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus({ preventScroll: true });
 
-    const onPointerDown = (event: PointerEvent) => {
+    const closeIfOutside = (event: Event) => {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    const onViewportChange = (event: Event) => {
-      if (event.type === 'scroll' && containerRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
+    // No toque, o painel só fecha com um toque de verdade: arrastar para rolar a tela não fecha.
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') closeIfOutside(event);
     };
     document.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('resize', onViewportChange);
-    window.addEventListener('scroll', onViewportChange, true);
+    document.addEventListener('click', closeIfOutside);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('resize', onViewportChange);
-      window.removeEventListener('scroll', onViewportChange, true);
+      document.removeEventListener('click', closeIfOutside);
     };
   }, [open]);
 
@@ -72,16 +81,7 @@ export function Popover({
       setOpen(false);
       return;
     }
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (rect) {
-      const width = Math.min(PANEL_WIDTH, window.innerWidth - 2 * VIEWPORT_MARGIN);
-      const preferred = align === 'right' ? rect.right - width : rect.left;
-      const maxLeft = window.innerWidth - width - VIEWPORT_MARGIN;
-      setPosition({
-        top: rect.bottom + 8,
-        left: Math.max(VIEWPORT_MARGIN, Math.min(preferred, maxLeft)),
-      });
-    }
+    onOpen?.();
     setOpen(true);
   };
 
@@ -120,9 +120,9 @@ export function Popover({
           role="group"
           aria-label={panelLabel}
           style={position ?? undefined}
-          className="fixed z-40 max-h-[calc(100dvh-8rem)] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-border bg-surface p-3 text-text shadow-md"
+          className="fixed z-40 w-72 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface p-3 text-text shadow-md"
         >
-          {children}
+          <div>{children}</div>
         </div>
       )}
     </div>

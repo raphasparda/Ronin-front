@@ -219,13 +219,10 @@ export function MyCardsPage() {
               className="flex flex-col gap-2"
             >
               <h2 id={`grupo-${group.group}`} className="text-sm">
-                <Pill status={status} icon={<Icon size={12} strokeWidth={2.5} />}>
+                <span className="sr-only">{`${group.label}, ${cardCount(group.cards.length)}`}</span>
+                <Pill aria-hidden status={status} icon={<Icon size={12} strokeWidth={2.5} />}>
                   {group.label}
-                  <span aria-hidden className="tabular-nums">
-                    {' '}
-                    {group.cards.length}
-                  </span>
-                  <span className="sr-only">, {cardCount(group.cards.length)}</span>
+                  <span className="tabular-nums">{group.cards.length}</span>
                 </Pill>
               </h2>
               <ul

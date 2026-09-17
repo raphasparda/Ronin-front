@@ -11,6 +11,8 @@ import {
 } from 'react';
 import { Link } from 'react-router';
 
+import { useAnchoredPosition } from './use-anchored-position';
+
 interface MenuContextValue {
   close: (restoreFocus: boolean) => void;
 }
@@ -24,7 +26,6 @@ function useMenuContext(): MenuContextValue {
 }
 
 const MENU_WIDTH = 256;
-const VIEWPORT_MARGIN = 16;
 
 function menuItems(menu: HTMLElement | null): HTMLElement[] {
   return menu
@@ -57,12 +58,19 @@ export function Menu({
 }: MenuProps) {
   const [open, setOpen] = useState(false);
   const [focusOnOpen, setFocusOnOpen] = useState<'first' | 'last'>('first');
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const buttonId = useId();
+  const position = useAnchoredPosition({
+    open,
+    anchorRef: buttonRef,
+    panelRef,
+    width: MENU_WIDTH,
+    align,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -89,16 +97,6 @@ export function Menu({
   }, [open, focusOnOpen]);
 
   const openMenu = (focus: 'first' | 'last') => {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (rect) {
-      const width = Math.min(MENU_WIDTH, window.innerWidth - 2 * VIEWPORT_MARGIN);
-      const preferred = align === 'right' ? rect.right - width : rect.left;
-      const maxLeft = window.innerWidth - width - VIEWPORT_MARGIN;
-      setPosition({
-        top: rect.bottom + 8,
-        left: Math.max(VIEWPORT_MARGIN, Math.min(preferred, maxLeft)),
-      });
-    }
     setFocusOnOpen(focus);
     setOpen(true);
   };
@@ -162,21 +160,24 @@ export function Menu({
 
       {open && (
         <div
-          style={position ? { top: position.top, left: position.left } : undefined}
-          className="fixed z-40 max-h-[calc(100dvh-5rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-border bg-surface p-1 text-text shadow-md"
+          ref={panelRef}
+          style={position ?? undefined}
+          className="fixed z-40 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface p-1 text-text shadow-md"
         >
-          {header}
-          <MenuContext value={{ close }}>
-            <div
-              ref={menuRef}
-              id={menuId}
-              role="menu"
-              aria-labelledby={buttonId}
-              onKeyDown={onMenuKeyDown}
-            >
-              {children}
-            </div>
-          </MenuContext>
+          <div>
+            {header}
+            <MenuContext value={{ close }}>
+              <div
+                ref={menuRef}
+                id={menuId}
+                role="menu"
+                aria-labelledby={buttonId}
+                onKeyDown={onMenuKeyDown}
+              >
+                {children}
+              </div>
+            </MenuContext>
+          </div>
         </div>
       )}
     </div>

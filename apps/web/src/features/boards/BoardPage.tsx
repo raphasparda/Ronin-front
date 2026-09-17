@@ -263,8 +263,20 @@ function BoardView() {
   const [labelsOpen, setLabelsOpen] = useState(false);
 
   const location = useLocation();
-  const boardFilter = useBoardFilter();
+  const urlFilter = useBoardFilter();
   const [filterOpen, setFilterOpen] = useState(false);
+  // Mexer no filtro (inclusive "Limpar") mantém a barra aberta, mesmo se ela abriu só pela URL.
+  const boardFilter: typeof urlFilter = {
+    ...urlFilter,
+    setFilter: (next) => {
+      setFilterOpen(true);
+      urlFilter.setFilter(next);
+    },
+    clear: () => {
+      setFilterOpen(true);
+      urlFilter.clear();
+    },
+  };
   const searchRef = useRef<HTMLInputElement>(null);
   const filterBarId = useId();
   const filterVisible = filterOpen || boardFilter.active;

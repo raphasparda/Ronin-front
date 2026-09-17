@@ -148,6 +148,20 @@ describe('Filtro do quadro (C11)', () => {
     expect(await visibleTitles()).toHaveLength(3);
   });
 
+  it('"Limpar" mantém a barra aberta quando o filtro veio só da URL', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp(`/b/${BOARD_ID}?prioridade=urgent`);
+
+    await screen.findByText(/Filtro ativo/);
+    await user.click(screen.getByRole('button', { name: 'Limpar' }));
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(screen.getByRole('search', { name: 'Filtros do quadro' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Filtros' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+  });
+
   it('o filtro continua ao abrir e fechar um card', async () => {
     const user = userEvent.setup();
     const { router } = renderApp(`/b/${BOARD_ID}?prioridade=urgent`);

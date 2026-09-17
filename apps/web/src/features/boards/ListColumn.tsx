@@ -96,8 +96,8 @@ export const ListColumn = memo(function ListColumn({
       ref={setNodeRef}
       aria-labelledby={titleId}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`flex w-[calc(100vw-3rem)] shrink-0 snap-start flex-col rounded-lg bg-surface-sunken sm:w-72 ${
-        isDragging ? 'relative z-10 shadow-lg' : ''
+      className={`relative flex w-[calc(100vw-3rem)] shrink-0 snap-start flex-col rounded-lg bg-surface-sunken sm:w-72 ${
+        isDragging ? 'z-10 shadow-lg' : ''
       }`}
     >
       <header

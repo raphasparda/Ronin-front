@@ -12,6 +12,18 @@ import { createPortal } from 'react-dom';
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Modais abertos, do mais antigo ao do topo: só o do topo reage quando o foco cai no <body>. */
+const openModals: HTMLElement[] = [];
+
+function isTopModal(panel: HTMLElement): boolean {
+  return openModals.at(-1) === panel;
+}
+
+function focusIsLost(): boolean {
+  const active = document.activeElement;
+  return active === null || active === document.body || !active.isConnected;
+}
+
 function focusables(root: HTMLElement | null): HTMLElement[] {
   return root
     ? Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.tabIndex !== -1)
@@ -25,13 +37,19 @@ export interface ModalProps {
   describedBy?: string;
   /** Elemento que recebe o foco ao abrir (padrão: o próprio painel). */
   getInitialFocus?: () => HTMLElement | null | undefined;
+  /**
+   * Elemento estável que recebe o foco quando o elemento focado some do diálogo (ex.: um
+   * formulário que fecha ao salvar). Padrão: o próprio painel.
+   */
+  getFallbackFocus?: () => HTMLElement | null | undefined;
   className: string;
   children: ReactNode;
 }
 
 /**
  * Base dos diálogos: portal, fundo, foco preso, Esc fecha e o foco volta ao elemento que abriu.
- * Quem usa define o layout do painel por `className`.
+ * Se o elemento focado for desmontado, o foco volta para dentro do diálogo; e, mesmo com o foco
+ * no <body>, Esc fecha e Tab volta ao diálogo. Quem usa define o layout do painel por `className`.
  */
 export function Modal({
   open,
@@ -39,25 +57,54 @@ export function Modal({
   labelledBy,
   describedBy,
   getInitialFocus,
+  getFallbackFocus,
   className,
   children,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const initialFocusRef = useRef(getInitialFocus);
+  const fallbackFocusRef = useRef(getFallbackFocus);
 
   useEffect(() => {
     onCloseRef.current = onClose;
     initialFocusRef.current = getInitialFocus;
+    fallbackFocusRef.current = getFallbackFocus;
   });
 
   useEffect(() => {
-    if (!open) return;
+    const panel = panelRef.current;
+    if (!open || !panel) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    const target = initialFocusRef.current?.() ?? panelRef.current;
-    target?.focus();
+    const target = initialFocusRef.current?.() ?? panel;
+    target.focus();
+    openModals.push(panel);
+
+    const recoverFocus = () => {
+      if (!isTopModal(panel) || !focusIsLost()) return;
+      (fallbackFocusRef.current?.() ?? panel).focus({ preventScroll: true });
+    };
+    const observer = new MutationObserver(recoverFocus);
+    observer.observe(panel, { childList: true, subtree: true });
+
+    const onDocumentKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented || !isTopModal(panel) || !focusIsLost()) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current();
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        const items = focusables(panel);
+        ((event.shiftKey ? items.at(-1) : items[0]) ?? panel).focus();
+      }
+    };
+    document.addEventListener('keydown', onDocumentKeyDown);
 
     return () => {
+      observer.disconnect();
+      document.removeEventListener('keydown', onDocumentKeyDown);
+      const index = openModals.indexOf(panel);
+      if (index !== -1) openModals.splice(index, 1);
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
   }, [open]);

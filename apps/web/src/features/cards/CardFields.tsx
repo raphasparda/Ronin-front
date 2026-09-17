@@ -8,7 +8,7 @@ import {
   type Label,
 } from '@kanban/shared';
 import { CalendarPlus, Pencil, Plus, Tag, UserPlus, X } from 'lucide-react';
-import { useId, useState, type FormEvent, type ReactNode } from 'react';
+import { useId, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
@@ -41,15 +41,23 @@ interface FieldProps {
 function Field({
   labelId,
   title,
+  headingRef,
   children,
 }: {
   labelId: string;
   title: string;
+  /** Torna o título focável por script: destino estável do foco quando um controle some. */
+  headingRef?: RefObject<HTMLHeadingElement | null>;
   children: ReactNode;
 }) {
   return (
     <section aria-labelledby={labelId} className="flex flex-col gap-2">
-      <h3 id={labelId} className="text-xs font-semibold tracking-wide text-muted uppercase">
+      <h3
+        ref={headingRef}
+        id={labelId}
+        tabIndex={headingRef ? -1 : undefined}
+        className="text-xs font-semibold tracking-wide text-muted uppercase"
+      >
         {title}
       </h3>
       {children}
@@ -176,6 +184,7 @@ export function CardAssigneesField({ card, readOnly, announce }: FieldProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Popover
             panelLabel="Adicionar responsável"
+            onOpen={() => setQuery('')}
             triggerClassName="inline-flex h-10 items-center gap-1.5 rounded-md px-2 font-medium text-text hover:bg-hover md:h-8"
             trigger={
               <>
@@ -250,6 +259,7 @@ export function CardDueField({ card, readOnly, announce }: FieldProps) {
   const update = useUpdateCard(card.id);
   const handleError = useBoardErrorHandler(card.boardId);
 
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [editing, setEditing] = useState(false);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -265,6 +275,14 @@ export function CardDueField({ card, readOnly, announce }: FieldProps) {
     setEditing(true);
   };
 
+  // O botão focado (do formulário ou "Remover prazo") vai sumir: o foco fica no título da seção.
+  const keepFocusInField = () => headingRef.current?.focus({ preventScroll: true });
+
+  const stopEditing = () => {
+    keepFocusInField();
+    setEditing(false);
+  };
+
   const save = (event: FormEvent) => {
     event.preventDefault();
     const parsed = dueInputSchema.safeParse({ date, time: withTime ? time : null });
@@ -276,7 +294,7 @@ export function CardDueField({ card, readOnly, announce }: FieldProps) {
       );
       return;
     }
-    setEditing(false);
+    stopEditing();
     announce(CARD_MESSAGES.dueSaved);
     update.mutate(
       { due: parsed.data },
@@ -285,6 +303,7 @@ export function CardDueField({ card, readOnly, announce }: FieldProps) {
   };
 
   const remove = () => {
+    keepFocusInField();
     setEditing(false);
     announce(CARD_MESSAGES.dueRemoved);
     update.mutate(
@@ -296,7 +315,7 @@ export function CardDueField({ card, readOnly, announce }: FieldProps) {
   const zoneName = timeZoneDisplayName(timeZone);
 
   return (
-    <Field labelId={labelId} title="Prazo">
+    <Field labelId={labelId} title="Prazo" headingRef={headingRef}>
       {editing ? (
         <form
           noValidate
@@ -304,7 +323,7 @@ export function CardDueField({ card, readOnly, announce }: FieldProps) {
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.stopPropagation();
-              setEditing(false);
+              stopEditing();
             }
           }}
           className="flex flex-col gap-2"
@@ -366,7 +385,7 @@ export function CardDueField({ card, readOnly, announce }: FieldProps) {
             <Button type="submit" size="sm">
               Salvar prazo
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => setEditing(false)}>
+            <Button variant="secondary" size="sm" onClick={stopEditing}>
               Cancelar
             </Button>
           </div>

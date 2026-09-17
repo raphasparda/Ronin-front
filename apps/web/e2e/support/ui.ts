@@ -55,9 +55,8 @@ export async function openCard(page: Page, title: string): Promise<Locator> {
 }
 
 /**
- * Marca uma pessoa como responsável pelo seletor "Adicionar responsável" do detalhe.
- * No mobile o painel abre abaixo da tela e fecha a qualquer rolagem (BUG registrado em
- * integration-bugs.spec.ts): lá o único caminho que funciona é buscar pelo nome e marcar pelo teclado.
+ * Marca uma pessoa como responsável pelo seletor "Adicionar responsável" do detalhe: abre o painel
+ * (a busca começa vazia a cada abertura), toca/clica na pessoa e fecha com Esc.
  */
 export async function assignPerson(
   page: Page,
@@ -65,23 +64,15 @@ export async function assignPerson(
   name: string,
   isMobile: boolean,
 ): Promise<void> {
-  const trigger = dialog.getByRole('button', { name: 'Adicionar', exact: true });
   const picker = page.getByRole('group', { name: 'Adicionar responsável' });
-  // Rolar até o botão fecha o painel recém-aberto (ele fecha em qualquer rolagem): repete.
-  await expect(async () => {
-    if (!(await picker.isVisible())) await trigger.click({ timeout: 2_000 });
-    await expect(picker).toBeVisible({ timeout: 1_000 });
-  }).toPass({ timeout: 10_000 });
-  if (isMobile) {
-    // A busca guarda o texto da abertura anterior: substitui em vez de digitar por cima.
-    await picker.getByRole('searchbox').fill(name);
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Space');
-  } else {
-    await picker.getByRole('checkbox', { name }).check();
-  }
+  await dialog.getByRole('button', { name: 'Adicionar', exact: true }).click();
+  await expect(picker.getByRole('searchbox', { name: 'Buscar pessoa' })).toHaveValue('');
+  const person = picker.getByRole('checkbox', { name });
+  if (isMobile) await person.tap();
+  else await person.check();
   await expect(dialog.getByRole('button', { name: `Remover ${name}` })).toBeVisible();
-  if (await picker.isVisible()) await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(picker).toBeHidden();
 }
 
 export async function openBoard(page: Page, boardId: string, boardName: string): Promise<void> {
@@ -144,12 +135,9 @@ export function localDue(
 export const HOUR_MS = 3_600_000;
 export const DAY_MS = 24 * HOUR_MS;
 
-/**
- * Fecha o detalhe pelo botão do cabeçalho ("Voltar" no mobile). No desktop o botão está sem nome
- * acessível (BUG em integration-bugs.spec.ts), então é localizado pela posição no cabeçalho.
- */
+/** Fecha o detalhe pelo botão do cabeçalho ("Voltar" no mobile, "Fechar" no desktop). */
 export async function closeCard(dialog: Locator): Promise<void> {
-  await dialog.locator('header').first().getByRole('button').last().click();
+  await dialog.getByRole('button', { name: /^(Voltar|Fechar)$/ }).click();
   await expect(dialog).toBeHidden();
 }
 

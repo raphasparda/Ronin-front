@@ -9,27 +9,12 @@ import { expect, signIn, test } from './support/fixtures';
 import { ANA, BRUNO, seedTeam } from './support/seed';
 import { cardDialog, DAY_MS, HOUR_MS, localDue } from './support/ui';
 
-/**
- * Único nó ignorado: o botão de fechar do detalhe do card sem nome no desktop (`button-name`,
- * crítico). O bug está registrado e medido em integration-bugs.spec.ts; ignorar só esse nó
- * mantém o axe acusando qualquer outra violação da tela. `E2E_SHOW_BUGS=1` desliga o filtro.
- */
-function isKnownIssue(ruleId: string, html: string): boolean {
-  if (process.env.E2E_SHOW_BUGS === '1') return false;
-  return (
-    ruleId === 'button-name' &&
-    html.includes('<button type="button" class="inline-flex h-10 shrink-0')
-  );
-}
-
 async function seriousViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze();
   return results.violations
     .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-    .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !isKnownIssue(v.id, n.html)) }))
-    .filter((v) => v.nodes.length > 0)
     .map((v) => ({
       id: v.id,
       impact: v.impact,

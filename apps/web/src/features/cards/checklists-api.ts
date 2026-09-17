@@ -62,12 +62,14 @@ function useChecklistMutation<TVariables, TData>(
     mutationKey,
     scope: { id: `checklists-${cardId}` },
     mutationFn,
+    // A mudança otimista vem antes do `await`: `mutate()` roda este trecho na hora, e o
+    // checkbox controlado já aparece marcado, sem esperar o cancelamento do polling.
     onMutate: async (variables: TVariables) => {
-      await queryClient.cancelQueries({ queryKey: cardQueryKey(cardId) });
       const snapshot = queryClient.getQueryData<CardDetail>(cardQueryKey(cardId))?.checklists;
       const { optimistic } = handlers;
       if (optimistic)
         setChecklists(queryClient, cardId, (current) => optimistic(current, variables));
+      await queryClient.cancelQueries({ queryKey: cardQueryKey(cardId) });
       return { snapshot };
     },
     onError: (_error, _variables, context) => {
