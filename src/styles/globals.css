@@ -516,6 +516,15 @@
    a partir do lado do gatilho. "Reduzir movimento" zera tudo (seção 4).
    ===================================================================== */
 @layer components {
+  /* marca d'água das katanas: discreta no claro, um pouco mais forte no escuro,
+     onde o traço preto quase some no fundo */
+  .brand-watermark {
+    opacity: 0.1;
+  }
+  [data-theme='dark'] .brand-watermark {
+    opacity: 0.22;
+  }
+
   .anim-backdrop-in {
     animation: backdrop-in 180ms var(--ease-standard) both;
   }

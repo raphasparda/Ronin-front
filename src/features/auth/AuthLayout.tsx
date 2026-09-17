@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { BrandWatermark } from '../../components/layout/BrandWatermark';
 import { Credit } from '../../components/layout/Credit';
 import { Logo } from '../../components/layout/Logo';
 import { ThemeSwitch } from '../../components/ui/ThemeSwitch';
@@ -70,13 +71,14 @@ export function AuthLayout({ variant = 'default', ...card }: AuthLayoutProps) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface text-text sm:bg-bg">
+      <BrandWatermark />
       <div className="flex justify-end px-4 pt-4 sm:px-6">
         <ThemeSwitch />
       </div>
-      <main className="flex flex-1 justify-center px-4 pt-4 pb-10 sm:items-center sm:px-6">
+      <main className="relative z-10 flex flex-1 justify-center px-4 pt-4 pb-10 sm:items-center sm:px-6">
         <AuthCard {...card} showLogo />
       </main>
-      <Credit className="px-4 pb-4" />
+      <Credit className="relative z-10 px-4 pb-4" />
     </div>
   );
 }

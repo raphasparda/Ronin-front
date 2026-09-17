@@ -2,6 +2,7 @@ import { Outlet } from 'react-router';
 
 import { AppHeader } from './AppHeader';
 import { BottomNav } from './BottomNav';
+import { BrandWatermark } from './BrandWatermark';
 import { Credit } from './Credit';
 
 /** A troca de página anima via View Transitions (lib/page-transitions.ts). */
@@ -14,12 +15,17 @@ export function AppLayout() {
       >
         Pular para o conteúdo
       </a>
+      <BrandWatermark />
       <AppHeader />
-      <main id="conteudo" tabIndex={-1} className="flex-1 px-4 pt-6 pb-6 outline-none md:px-6">
+      <main
+        id="conteudo"
+        tabIndex={-1}
+        className="relative z-10 flex-1 px-4 pt-6 pb-6 outline-none md:px-6"
+      >
         <Outlet />
       </main>
       {/* no celular, a folga de baixo evita a barra de navegação fixa */}
-      <Credit className="px-4 pt-2 pb-20 md:pb-4" />
+      <Credit className="relative z-10 px-4 pt-2 pb-20 md:pb-4" />
       <BottomNav />
     </div>
   );
