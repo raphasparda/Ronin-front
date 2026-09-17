@@ -38,7 +38,7 @@ import { PriorityBadge } from '../../components/ui/PriorityBadge';
 import { describeDue, type DueDisplay } from '../../lib/due';
 import { displayName } from '../users/users-api';
 import { useCardFaceData, type CardFaceData } from './card-face-data';
-import { CARD_LINK_STATE, cardPath } from './cards-api';
+import { CARD_LINK_STATE, cardPath, isCardJustCreated } from './cards-api';
 
 export interface CardFaceActions {
   onMove: (card: CardSummary) => void;
@@ -216,9 +216,11 @@ export const CardFace = memo(function CardFace({
     disabled: readOnly || pending,
   });
 
+  const justCreated = !pending && isCardJustCreated(card.id);
+
   if (pending) {
     return (
-      <div aria-busy style={listMark(color)} className={`${FACE_CLASS} text-muted`}>
+      <div aria-busy style={listMark(color)} className={`anim-fade-in ${FACE_CLASS} text-muted`}>
         <span className="flex items-start gap-2">
           <LoaderCircle aria-hidden size={14} className="mt-0.5 shrink-0 animate-spin" />
           <span className="line-clamp-3 break-words">{card.title}</span>
@@ -298,33 +300,36 @@ export const CardFace = memo(function CardFace({
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className="group relative"
     >
-      {isDragging ? (
-        <div
-          aria-hidden
-          className="rounded-lg border-2 border-dashed border-border-strong bg-surface-sunken p-3 text-transparent"
-        >
-          <span className="line-clamp-3">{card.title}</span>
-        </div>
-      ) : (
-        <>
-          <Link
-            to={to}
-            state={CARD_LINK_STATE}
-            aria-label={cardFaceLabel(card, data, due)}
-            aria-keyshortcuts={readOnly ? undefined : 'M'}
-            onPointerDown={listeners?.onPointerDown as PointerEventHandler | undefined}
-            onClick={onClick}
-            onKeyDown={onKeyDown}
-            style={listMark(color)}
-            className={`focus-inset hover:border-border-strong hover:shadow-md ${
-              readOnly ? '' : 'pr-10'
-            } ${FACE_CLASS}`}
+      {/* bubble no card recém-criado fica num wrapper interno: o nó do sortable usa transform */}
+      <div className={justCreated ? 'anim-card-bubble' : undefined}>
+        {isDragging ? (
+          <div
+            aria-hidden
+            className="rounded-lg border-2 border-dashed border-border-strong bg-surface-sunken p-3 text-transparent"
           >
-            <FaceContent card={card} data={data} due={due} />
-          </Link>
-          {menu}
-        </>
-      )}
+            <span className="line-clamp-3">{card.title}</span>
+          </div>
+        ) : (
+          <>
+            <Link
+              to={to}
+              state={CARD_LINK_STATE}
+              aria-label={cardFaceLabel(card, data, due)}
+              aria-keyshortcuts={readOnly ? undefined : 'M'}
+              onPointerDown={listeners?.onPointerDown as PointerEventHandler | undefined}
+              onClick={onClick}
+              onKeyDown={onKeyDown}
+              style={listMark(color)}
+              className={`focus-inset hover:border-border-strong hover:shadow-md ${
+                readOnly ? '' : 'pr-10'
+              } ${FACE_CLASS}`}
+            >
+              <FaceContent card={card} data={data} due={due} />
+            </Link>
+            {menu}
+          </>
+        )}
+      </div>
     </div>
   );
 });

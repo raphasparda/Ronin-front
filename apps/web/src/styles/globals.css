@@ -537,6 +537,15 @@
   .anim-pop-in[style*='bottom'] {
     transform-origin: bottom center;
   }
+
+  /* card recém-criado: bubble a partir do topo da lista */
+  .anim-card-bubble {
+    transform-origin: top center;
+    animation: card-bubble 420ms ease-out both;
+  }
+  .anim-fade-in {
+    animation: backdrop-in 160ms var(--ease-standard) both;
+  }
 }
 
 @keyframes backdrop-in {
@@ -558,6 +567,22 @@
   }
   88% {
     transform: scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes card-bubble {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  80% {
+    transform: scale(0.98);
   }
   100% {
     transform: scale(1);

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { Credit } from '../../components/layout/Credit';
 import { Logo } from '../../components/layout/Logo';
 import { ThemeSwitch } from '../../components/ui/ThemeSwitch';
 import { usePageTransition } from '../../lib/use-page-transition';
@@ -20,21 +21,21 @@ interface AuthLayoutProps {
 const LOGIN_WORDS: ReadonlyArray<{ word: string; className: string }> = [
   { word: 'Organização', className: 'text-6xl font-black text-text' },
   { word: 'foco', className: 'text-3xl font-semibold text-muted' },
-  { word: 'Clareza', className: 'text-4xl font-bold text-accent-text' },
+  { word: 'Clareza', className: 'text-4xl font-bold text-accent' },
   { word: 'equipe', className: 'text-2xl font-medium text-muted' },
   { word: 'Prazos', className: 'text-5xl font-extrabold text-text' },
   { word: 'fluxo', className: 'text-xl font-semibold text-muted' },
-  { word: 'Facilidade', className: 'text-5xl font-black text-accent-text' },
+  { word: 'Facilidade', className: 'text-5xl font-black text-accent' },
   { word: 'prioridades', className: 'text-2xl font-bold text-text' },
   { word: 'Simples', className: 'text-4xl font-extrabold text-text' },
   { word: 'ritmo', className: 'text-2xl font-medium text-muted' },
   { word: 'Entregas', className: 'text-5xl font-bold text-text' },
-  { word: 'kanban', className: 'text-xl font-semibold text-accent-text' },
+  { word: 'kanban', className: 'text-xl font-bold text-accent' },
   { word: 'Controle', className: 'text-3xl font-black text-muted' },
   { word: 'disciplina', className: 'text-3xl font-bold text-text' },
   { word: 'Agilidade', className: 'text-4xl font-black text-text' },
   { word: 'tarefas', className: 'text-xl font-medium text-muted' },
-  { word: 'Precisão', className: 'text-5xl font-extrabold text-accent-text' },
+  { word: 'Precisão', className: 'text-5xl font-extrabold text-accent' },
 ];
 
 function AuthCard({
@@ -75,6 +76,7 @@ export function AuthLayout({ variant = 'default', ...card }: AuthLayoutProps) {
       <main className="flex flex-1 justify-center px-4 pt-4 pb-10 sm:items-center sm:px-6">
         <AuthCard {...card} showLogo />
       </main>
+      <Credit className="px-4 pb-4" />
     </div>
   );
 }
@@ -103,6 +105,7 @@ function LoginLayout(card: Omit<AuthLayoutProps, 'variant'>) {
           </p>
           <AuthCard {...card} showLogo={false} />
         </main>
+        <Credit className="px-4 pb-4" />
       </div>
 
       <div

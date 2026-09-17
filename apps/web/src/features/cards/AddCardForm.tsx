@@ -87,7 +87,7 @@ export function AddCardForm({ listName, onAdd }: AddCardFormProps) {
       aria-label={`Adicionar card em ${listName}`}
       onSubmit={(event) => void submit(event)}
       onBlur={onBlur}
-      className="flex flex-col gap-2"
+      className="anim-pop-in flex flex-col gap-2"
     >
       <label htmlFor={fieldId} className="sr-only">
         Título do card

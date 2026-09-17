@@ -35,6 +35,27 @@ import {
   setBoardData,
 } from '../boards/boards-api';
 
+/**
+ * Cards criados nesta sessão há menos de 1 s: a face entra com "bubble" ao trocar o card
+ * otimista pelo real. Checagem por tempo (sem consumir) para ser pura em render/StrictMode.
+ */
+const justCreatedCards = new Map<string, number>();
+const JUST_CREATED_MS = 1000;
+
+export function markCardJustCreated(cardId: string): void {
+  justCreatedCards.set(cardId, Date.now());
+}
+
+export function isCardJustCreated(cardId: string): boolean {
+  const at = justCreatedCards.get(cardId);
+  if (at === undefined) return false;
+  if (Date.now() - at > JUST_CREATED_MS) {
+    justCreatedCards.delete(cardId);
+    return false;
+  }
+  return true;
+}
+
 export const CARD_POLL_INTERVAL_MS = 30_000;
 
 export const cardQueryKey = (cardId: string) => ['card', cardId] as const;
@@ -289,6 +310,7 @@ export function useCreateCard(boardId: string) {
       }));
     },
     onSuccess: ({ card }, { tempId }) => {
+      markCardJustCreated(card.id);
       setBoardData(queryClient, boardId, (payload) => ({
         ...payload,
         cards: payload.cards.map((item) => (item.id === tempId ? card : item)),
