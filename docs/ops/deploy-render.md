@@ -73,7 +73,7 @@ Em _Headers_. Path `/*` vale para todo o site; `/assets/*` sobrescreve o `Cache-
 
 | Path        | Header                      | Valor                                                                                                                                                                                                                                  |
 | ----------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/*`        | `Content-Security-Policy`   | `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` |
+| `/*`        | `Content-Security-Policy`   | `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://<R2_PUBLIC_HOST>; font-src 'self'; connect-src 'self' https://<R2_PUBLIC_HOST>; manifest-src 'self'; worker-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` |
 | `/*`        | `X-Content-Type-Options`    | `nosniff`                                                                                                                                                                                                                              |
 | `/*`        | `X-Frame-Options`           | `DENY`                                                                                                                                                                                                                                 |
 | `/*`        | `Referrer-Policy`           | `strict-origin-when-cross-origin`                                                                                                                                                                                                      |
@@ -89,8 +89,9 @@ Em _Headers_. Path `/*` vale para todo o site; `/assets/*` sobrescreve o `Cache-
 - **Zod sem `eval`**: o Zod 4 sonda `new Function` ao criar schemas de objeto, e a CSP registra essa tentativa como violação mesmo com o erro tratado. `src/lib/zod-csp.ts` liga `z.config({ jitless: true })`; o `vite.config.ts` coloca esse arquivo no mesmo chunk do `zod` para ele rodar antes dos schemas do `@raphasparda/ronin-shared`. Não remova o grupo `zod` do `codeSplitting` sem refazer a validação abaixo.
 - **`style-src 'self'`**: o CSS sai em `/assets/*.css`. Os estilos dinâmicos do React e do `@dnd-kit` são aplicados por `element.style`, que a CSP não bloqueia.
 - **`font-src 'self'`**: a Figtree vem do `@fontsource-variable` e é empacotada em `/assets/*.woff2`.
-- **`img-src 'self' data:`**: imagens de `public/` e eventuais `data:` que o Vite embute.
-- **`connect-src 'self'`**: a API chega pelo rewrite `/api/*`.
+- **`img-src 'self' data: blob: https://<R2_PUBLIC_HOST>`**: imagens de `public/` e eventuais `data:` que o Vite embute; `blob:` é a pré-visualização local da capa enquanto o envio acontece; o host do R2 serve a capa por URL assinada (Fatia 11, ADR 0016).
+- **`connect-src 'self' https://<R2_PUBLIC_HOST>`**: a API chega pelo rewrite `/api/*`; o host do R2 recebe o `PUT` do upload direto da capa.
+- **`<R2_PUBLIC_HOST>` é um espaço reservado** (tarefa 11.9): troque pelo host real do bucket depois de criá-lo — `<bucket>.<account-id>.r2.cloudflarestorage.com` (endpoint S3 do R2) ou o domínio próprio ligado ao bucket. Sem esse host na CSP o navegador bloqueia o `PUT` do upload e a imagem da capa. Enquanto a instância não tem R2 configurado, `features.cardCovers` vem `false`, a UI não mostra "Adicionar capa" e a CSP pode ficar sem o host (os dois trechos `https://<R2_PUBLIC_HOST>` saem da linha).
 - **`frame-ancestors 'none'`** e `X-Frame-Options: DENY`: ninguém embute o app em iframe.
 
 ### Cache
@@ -121,6 +122,8 @@ Build de produção servido por um servidor estático local com exatamente os he
 | Meus cards 360px                                          | 0         |
 
 Antes do ajuste do Zod, todas as telas registravam `script-src eval` no chunk dos schemas.
+
+Capa do card (Fatia 11): a validação com o host do R2 só pode ser refeita quando o bucket existir (tarefa 11.9). Telas a repetir com o host preenchido: quadro com card com capa, detalhe do card com capa, envio de capa (o `PUT` direto no R2) — nenhuma violação de `img-src` nem de `connect-src`.
 
 Para repetir depois de mudar dependências ou o `index.html`: `pnpm build`, sirva o `dist/` com os headers da tabela e o fallback para `index.html`, abra as telas no Chromium e procure `Refused to` / `Content Security Policy` no console.
 

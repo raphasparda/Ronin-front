@@ -37,6 +37,7 @@ import { CardChecklists } from './CardChecklists';
 import { CardCompletion } from './CardCompletion';
 import { CardComments } from './CardComments';
 import { CardDescription, DiscardDescriptionDialog } from './CardDescription';
+import { CardCoverField } from './CardCoverField';
 import { CardCoverPreview } from './CardCoverImage';
 import { CardAssigneesField, CardDueField, CardLabelsField, CardPriorityField } from './CardFields';
 import { CardVisibilityPanel } from './CardVisibilityPanel';
@@ -352,6 +353,7 @@ function CardDetailView({ card, onClose }: CardDetailViewProps) {
                 readOnly={readOnly}
                 announce={announce}
               />
+              <CardCoverField card={card} readOnly={readOnly} announce={announce} />
               <CardVisibilityPanel
                 card={card}
                 readOnly={boardArchived}
