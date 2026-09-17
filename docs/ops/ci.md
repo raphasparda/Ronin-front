@@ -30,7 +30,7 @@ _Settings → Secrets and variables → Actions_:
 | Variável | `RONIN_API_REF`        | não                                 | branch ou tag do ronin-api a testar. Padrão: `main`                                                                                                                                             |
 | Segredo  | `RONIN_API_TOKEN`      | **sim, se o ronin-api for privado** | fine-grained PAT (dono `raphasparda`) com acesso só ao repositório `Ronin-End`, permissão _Contents: Read-only_. Sem ele, o checkout usa o `GITHUB_TOKEN`, que não lê outro repositório privado |
 
-O PAT fine-grained expira (máximo 1 ano): anote a data e renove antes, senão o CI falha no checkout do ronin-api.
+O PAT fine-grained expira (máximo 1 ano): anote a data e renove antes, senão o CI falha no checkout do ronin-api. O mesmo PAT é o `GH_RONIN_END_TOKEN` do Static Site no Render ([`deploy-render.md`](deploy-render.md)): ao renovar, atualize os dois.
 
 ## Banco nos E2E
 

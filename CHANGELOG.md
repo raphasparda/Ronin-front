@@ -17,6 +17,11 @@ Entrega das Fatias 0 a 9 do MVP, na branch `feat/mvp-fatias-2-9`. A Fatia 10 (pr
 
 ### Adicionado
 
+#### Deploy e configuração inicial
+
+- Tela "Configurar a equipe" pede o **código de configuração** quando a API informa `requiresSetupToken` e envia `setupToken`; `403 SETUP_TOKEN_INVALID` aparece no próprio campo, com foco nele.
+- Deploy do front como Static Site no Render: `scripts/render-build.sh` clona o Ronin-End com `GH_RONIN_END_TOKEN` (sem expor o token), instala só o `@raphasparda/ronin-shared` e gera `dist/`. Guia com configuração, rewrites (`/api/*` para a API e fallback da SPA), headers de segurança e cache em [`docs/ops/deploy-render.md`](docs/ops/deploy-render.md).
+
 #### Base e ambiente de desenvolvimento
 
 - Monorepo pnpm com `apps/api` (Fastify 5 + Drizzle + PostgreSQL 18), `apps/web` (React 19 + Vite + Tailwind 4) e `packages/shared` (contratos Zod e regras de domínio).
@@ -84,6 +89,7 @@ Entrega das Fatias 0 a 9 do MVP, na branch `feat/mvp-fatias-2-9`. A Fatia 10 (pr
 - Configuração fail-closed: a API não sobe com `NODE_ENV=production` e `APP_ORIGIN` em `http://`, nem com `APP_ORIGIN` em `https://` fora de produção.
 - Logs sem dados sensíveis: erros de banco saem sem valores de parâmetros nem mensagens com e-mail ou hash; cookies, senhas e tokens são omitidos.
 - Na interface: redirecionamento pós-login (`?next=`) aceita só caminhos internos.
+- CSP do site estático sem `'unsafe-inline'` nem `'unsafe-eval'` (`script-src 'self'`, `style-src 'self'`, `connect-src 'self'`, `frame-ancestors 'none'`), validada no Chromium com o build de produção. O Zod roda em modo `jitless` para não tentar `new Function`.
 
 ### Corrigido
 

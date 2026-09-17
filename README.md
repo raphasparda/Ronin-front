@@ -24,6 +24,7 @@ O Ronin é um app de tarefas em quadros, no estilo Trello e ClickUp, para uma eq
 - [Destaques técnicos](#destaques-técnicos)
 - [Stack](#stack)
 - [Documentação](#documentação)
+- [Deploy](#deploy)
 - [Autor](#autor)
 
 ## Telas
@@ -98,8 +99,13 @@ Capturas geradas com o próprio app, rodando com dados de exemplo.
 | [`docs/design/screens.md`](docs/design/screens.md)             | telas e fluxos                                   |
 | [`docs/ops/setup-local.md`](docs/ops/setup-local.md)           | ambiente local, proxy, E2E                       |
 | [`docs/ops/ci.md`](docs/ops/ci.md)                             | pipeline do GitHub Actions, segredos e variáveis |
+| [`docs/ops/deploy-render.md`](docs/ops/deploy-render.md)       | deploy como Static Site no Render                |
 | [`docs/ops/known-issues.md`](docs/ops/known-issues.md)         | problemas conhecidos                             |
 | [`CHANGELOG.md`](CHANGELOG.md)                                 | histórico de entregas                            |
+
+## Deploy
+
+O front é publicado como **Static Site no Render**: build com `sh scripts/render-build.sh` (clona o repositório da API para obter os contratos), publicação do `dist/`, rewrite de `/api/*` para a API e headers de segurança com CSP estrita. Push na `main` publica sozinho. Passo a passo, variáveis e headers em [`docs/ops/deploy-render.md`](docs/ops/deploy-render.md).
 
 ## Autor
 
