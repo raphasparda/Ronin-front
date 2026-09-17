@@ -173,7 +173,7 @@ export function Menu({
         <div
           ref={panelRef}
           style={position ?? undefined}
-          className="fixed z-40 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface p-1 text-text shadow-md"
+          className="anim-pop-in fixed z-40 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface p-1 text-text shadow-md"
         >
           <div>
             {header}

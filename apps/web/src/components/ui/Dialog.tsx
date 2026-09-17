@@ -137,7 +137,7 @@ export function Modal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay sm:p-4">
+    <div className="anim-backdrop-in fixed inset-0 z-50 flex items-center justify-center bg-overlay sm:p-4">
       <div
         ref={panelRef}
         role="dialog"
@@ -146,7 +146,7 @@ export function Modal({
         aria-describedby={describedBy}
         tabIndex={-1}
         onKeyDown={onKeyDown}
-        className={`flex h-full w-full flex-col bg-surface text-text shadow-lg outline-none sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl sm:border sm:border-border ${className}`}
+        className={`anim-bubble-in flex h-full w-full flex-col bg-surface text-text shadow-lg outline-none sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl sm:border sm:border-border ${className}`}
       >
         {children}
       </div>

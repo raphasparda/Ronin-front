@@ -3,13 +3,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
-import { presetTheme, type Theme } from './support/a11y';
+import { presetTheme, type Theme, waitForFiniteAnimations } from './support/a11y';
 import { listByName } from './support/api';
 import { expect, signIn, test } from './support/fixtures';
 import { ANA, BRUNO, seedTeam } from './support/seed';
 import { cardDialog, DAY_MS, HOUR_MS, localDue } from './support/ui';
 
 async function seriousViolations(page: Page) {
+  await waitForFiniteAnimations(page);
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze();

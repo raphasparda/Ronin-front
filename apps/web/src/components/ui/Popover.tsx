@@ -120,7 +120,7 @@ export function Popover({
           role="group"
           aria-label={panelLabel}
           style={position ?? undefined}
-          className="fixed z-40 w-72 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface p-3 text-text shadow-md"
+          className="anim-pop-in fixed z-40 w-72 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface p-3 text-text shadow-md"
         >
           <div>{children}</div>
         </div>
