@@ -419,6 +419,65 @@
   animation-timing-function: var(--ease-standard);
 }
 
+/* entrar na plataforma: o login avança em direção a quem olha e some; o app surge de trás */
+:root[data-nav-transition='enter']::view-transition-old(root),
+:root[data-nav-transition='enter']::view-transition-new(root),
+:root[data-nav-transition='exit']::view-transition-old(root),
+:root[data-nav-transition='exit']::view-transition-new(root) {
+  mix-blend-mode: normal;
+  animation-duration: 560ms;
+  animation-timing-function: var(--nav-ease);
+  animation-fill-mode: both;
+}
+:root[data-nav-transition='enter']::view-transition-old(root) {
+  animation-name: nav-zoom-away;
+}
+:root[data-nav-transition='enter']::view-transition-new(root) {
+  animation-name: nav-rise-in;
+  animation-delay: 80ms;
+}
+/* sair: o app recua e o login volta */
+:root[data-nav-transition='exit']::view-transition-old(root) {
+  z-index: 1;
+  animation-name: nav-sink-away;
+}
+:root[data-nav-transition='exit']::view-transition-new(root) {
+  animation-name: nav-fade-in;
+}
+:root[data-nav-transition='enter']::view-transition-group(app-header),
+:root[data-nav-transition='enter']::view-transition-group(app-bottom-nav) {
+  animation-duration: 0ms;
+}
+:root[data-nav-transition='enter']::view-transition-new(app-header),
+:root[data-nav-transition='enter']::view-transition-new(app-bottom-nav) {
+  animation: nav-fade-in 420ms var(--nav-ease) 220ms both;
+}
+
+@keyframes nav-zoom-away {
+  to {
+    opacity: 0;
+    transform: scale(1.12);
+    filter: blur(6px);
+  }
+}
+@keyframes nav-rise-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@keyframes nav-sink-away {
+  to {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@keyframes nav-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes nav-slide-in {
   from {
     transform: translateX(100%);

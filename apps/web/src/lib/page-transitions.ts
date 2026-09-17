@@ -4,8 +4,11 @@ import { pageTransitionKey } from './use-page-transition';
 
 type Router = ReturnType<typeof createBrowserRouter>;
 
-/** `push`: entrar um nível; `pop`: voltar um nível; `fade`: trocar de seção no mesmo nível. */
-export type NavTransition = 'push' | 'pop' | 'fade' | 'none';
+/**
+ * `push`: entrar um nível; `pop`: voltar um nível; `fade`: trocar de seção no mesmo nível;
+ * `enter`: do login/setup/convite para dentro da plataforma; `exit`: sair para o login.
+ */
+export type NavTransition = 'push' | 'pop' | 'fade' | 'enter' | 'exit' | 'none';
 
 const AUTH_PATHS = ['/login', '/setup', '/convite', '/redefinir-senha'];
 
@@ -25,8 +28,12 @@ export function navDepth(pathname: string): number {
 }
 
 export function navTransitionType(fromPathname: string, toPathname: string): NavTransition {
-  // Telas de login/setup têm fade próprio (AuthLayout): evita animar duas vezes.
-  if (isAuthPath(fromPathname) || isAuthPath(toPathname)) return 'none';
+  const fromAuth = isAuthPath(fromPathname);
+  const toAuth = isAuthPath(toPathname);
+  if (fromAuth && !toAuth) return 'enter';
+  if (!fromAuth && toAuth) return 'exit';
+  // Entre telas de login/setup: o AuthLayout já faz fade ao montar.
+  if (fromAuth && toAuth) return 'none';
   // Admin: as abas são um controle segmentado, não uma pilha.
   const fromKey = fromPathname.startsWith('/admin') ? '/admin' : pageTransitionKey(fromPathname);
   const toKey = toPathname.startsWith('/admin') ? '/admin' : pageTransitionKey(toPathname);
@@ -58,7 +65,8 @@ function resolvePathname(to: unknown, current: string): string | null {
  * Transições estilo iOS entre páginas com a View Transitions API.
  *
  * - `router.navigate` (usado por `<Link>` e `useNavigate`) liga `viewTransition` quando a
- *   navegação troca de página; `replace` (redirecionamentos) e mudanças só de query não animam.
+ *   navegação troca de página; `replace` (redirecionamentos) e mudanças só de query não animam,
+ *   exceto entrar na plataforma pelo login e sair para o login.
  * - Voltar pelo navegador reaproveita a transição aplicada na ida (comportamento do React Router).
  * - O tipo (`push`/`pop`/`fade`) vai em `html[data-nav-transition]` antes do snapshot novo;
  *   o CSS em globals.css desenha o deslize.
@@ -66,18 +74,21 @@ function resolvePathname(to: unknown, current: string): string | null {
 export function installPageTransitions(router: Router): void {
   const originalNavigate = router.navigate.bind(router);
 
-  router.navigate = ((to: unknown, opts?: Record<string, unknown>) => {
-    if (typeof to === 'number' || opts?.replace || opts?.viewTransition !== undefined) {
+  router.navigate = (to: unknown, opts?: Record<string, unknown>) => {
+    if (typeof to === 'number' || opts?.viewTransition !== undefined) {
       return originalNavigate(to as never, opts as never);
     }
     const current = router.state.location.pathname;
     const target = resolvePathname(to, current);
     const type = target ? navTransitionType(current, target) : 'none';
-    if (type === 'none' || prefersReducedMotion()) {
+    // `replace` costuma ser redirecionamento e não anima, exceto entrar/sair da plataforma
+    // (o login e o logout navegam com replace).
+    const replaceAllowed = type === 'enter' || type === 'exit';
+    if (type === 'none' || (opts?.replace && !replaceAllowed) || prefersReducedMotion()) {
       return originalNavigate(to as never, opts as never);
     }
     return originalNavigate(to as never, { ...opts, viewTransition: true } as never);
-  });
+  };
 
   let previous = router.state.location.pathname;
   router.subscribe((state) => {

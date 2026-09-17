@@ -20,8 +20,15 @@ describe('navTransitionType', () => {
     expect(navTransitionType('/b/abc', '/b/abc/c/1')).toBe('none');
     expect(navTransitionType('/b/abc/c/1', '/b/abc')).toBe('none');
     expect(navTransitionType('/admin/membros', '/admin/convites')).toBe('none');
-    expect(navTransitionType('/login', '/')).toBe('none');
-    expect(navTransitionType('/', '/login')).toBe('none');
+    expect(navTransitionType('/login', '/setup')).toBe('none');
+  });
+
+  it('entrar na plataforma e sair para o login', () => {
+    expect(navTransitionType('/login', '/')).toBe('enter');
+    expect(navTransitionType('/setup', '/')).toBe('enter');
+    expect(navTransitionType('/convite', '/b/abc')).toBe('enter');
+    expect(navTransitionType('/', '/login')).toBe('exit');
+    expect(navTransitionType('/b/abc/c/1', '/login')).toBe('exit');
   });
 
   it('profundidade', () => {
@@ -79,6 +86,10 @@ describe('installPageTransitions', () => {
     expect(navigate).toHaveBeenNthCalledWith(1, '/', { replace: true });
     expect(navigate).toHaveBeenNthCalledWith(2, '?prioridade=urgent', undefined);
     expect(navigate).toHaveBeenNthCalledWith(3, '/b/abc/c/1', undefined);
+
+    const login = install('/login');
+    await login.router.navigate('/', { replace: true });
+    expect(login.navigate).toHaveBeenCalledWith('/', { replace: true, viewTransition: true });
 
     const reduced = install('/', true);
     await reduced.router.navigate('/b/abc');

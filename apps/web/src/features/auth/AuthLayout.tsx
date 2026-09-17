@@ -99,7 +99,7 @@ function LoginLayout(card: Omit<AuthLayoutProps, 'variant'>) {
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="flex flex-1 flex-col items-center px-4 pt-16 pb-10 sm:justify-center sm:px-6">
           <p className="mb-6 pl-[0.4em] text-5xl font-black tracking-[0.4em] text-text sm:text-6xl">
-            RONIN
+            <span className="text-accent">RO</span>NIN
           </p>
           <AuthCard {...card} showLogo={false} />
         </main>
