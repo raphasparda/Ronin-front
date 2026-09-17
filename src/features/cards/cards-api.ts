@@ -7,11 +7,13 @@ import {
   cardSummarySchema,
   completionChangeOnMove,
   sortByPosition,
+  type BoardCard,
   type BoardPayload,
   type CardDetail,
   type CardPriority,
   type CardSummary,
   type CompletionChange,
+  type LockedCard,
   type Placement,
   type UpdateCardRequest,
 } from '@raphasparda/ronin-shared';
@@ -70,8 +72,31 @@ export interface CardLinkState {
 }
 export const CARD_LINK_STATE: CardLinkState = { fromApp: true };
 
-/** Cards de uma lista, na ordem do quadro. */
-export function cardsInList(cards: readonly CardSummary[], listId: string): CardSummary[] {
+/**
+ * Card restrito ao qual o usuário não tem acesso: o servidor manda só `{ id, listId, position,
+ * title, locked }` (ADR 0015). Ele ocupa lugar na lista, mas não abre, não arrasta e não entra
+ * em nenhum cálculo que dependa dos campos que não vieram.
+ */
+export function isLockedCard(card: BoardCard): card is LockedCard {
+  return card.locked;
+}
+
+/** Só os cards que a pessoa pode abrir (os bloqueados ficam de fora). */
+export function unlockedCards(cards: readonly BoardCard[]): CardSummary[] {
+  return cards.filter((card): card is CardSummary => !card.locked);
+}
+
+/** Card do payload do quadro pelo id, só se a pessoa tiver acesso a ele. */
+export function findUnlockedCard(
+  cards: readonly BoardCard[] | undefined,
+  cardId: string,
+): CardSummary | undefined {
+  const card = cards?.find((item) => item.id === cardId);
+  return card && !card.locked ? card : undefined;
+}
+
+/** Cards de uma lista, na ordem do quadro (bloqueados incluídos: eles ocupam posição). */
+export function cardsInList(cards: readonly BoardCard[], listId: string): BoardCard[] {
   return sortByPosition(cards.filter((card) => card.listId === listId));
 }
 
@@ -112,7 +137,7 @@ export function moveCardInPayload(
   cardId: string,
   destination: CardDestination,
 ): BoardPayload | null {
-  const card = payload.cards.find((item) => item.id === cardId);
+  const card = findUnlockedCard(payload.cards, cardId);
   if (!card) return payload;
   if (destination.boardId !== payload.board.id) {
     return { ...payload, cards: payload.cards.filter((item) => item.id !== cardId) };
@@ -144,7 +169,7 @@ export function moveCardInPayload(
     return {
       ...payload,
       cards: payload.cards.map((item) =>
-        item.id === cardId ? { ...item, ...moved, position } : item,
+        item.id === cardId ? { ...card, ...moved, position } : item,
       ),
     };
   }
@@ -157,7 +182,7 @@ export function moveCardInPayload(
     cards: payload.cards.map((item) => {
       const key = keys.get(item.id);
       if (key === undefined) return item;
-      return item.id === cardId ? { ...item, ...moved, position: key } : { ...item, position: key };
+      return item.id === cardId ? { ...card, ...moved, position: key } : { ...item, position: key };
     }),
   };
 }
@@ -196,7 +221,9 @@ export function restoreCardPlacement(payload: BoardPayload, previous: CardSummar
   return {
     ...payload,
     cards: payload.cards.map((card) =>
-      card.id === previous.id ? { ...card, boardId, listId, position, status, completedAt } : card,
+      card.id === previous.id && !card.locked
+        ? { ...card, boardId, listId, position, status, completedAt }
+        : card,
     ),
   };
 }
@@ -283,6 +310,7 @@ export function useCreateCard(boardId: string) {
       setBoardData(queryClient, boardId, (payload) => {
         const last = cardsInList(payload.cards, listId).at(-1)?.position ?? null;
         const temp: CardSummary = {
+          locked: false,
           id: tempId,
           boardId,
           listId,
@@ -293,11 +321,13 @@ export function useCreateCard(boardId: string) {
           dueAt: null,
           dueHasTime: false,
           priority: null,
+          visibility: 'team',
           labelIds: [],
           assigneeIds: [],
           checklist: { done: 0, total: 0 },
           commentCount: 0,
           hasDescription: false,
+          cover: null,
           archivedAt: null,
         };
         return { ...payload, cards: [...payload.cards, temp] };
@@ -341,6 +371,8 @@ export type CardSummaryPatch = Partial<
     | 'assigneeIds'
     | 'checklist'
     | 'commentCount'
+    | 'visibility'
+    | 'cover'
   >
 >;
 
@@ -354,7 +386,9 @@ export function patchCard(
   setCardDetail(queryClient, cardId, (card) => ({ ...card, ...patch }));
   setBoardData(queryClient, boardId, (payload) => ({
     ...payload,
-    cards: payload.cards.map((card) => (card.id === cardId ? { ...card, ...patch } : card)),
+    cards: payload.cards.map((card) =>
+      card.id === cardId && !card.locked ? { ...card, ...patch } : card,
+    ),
   }));
 }
 
@@ -423,7 +457,7 @@ export function useSetCardPriority(boardId: string) {
     onMutate: async ({ cardId, priority }) => {
       await queryClient.cancelQueries({ queryKey: boardQueryKey(boardId) });
       const payload = queryClient.getQueryData<BoardPayload>(boardQueryKey(boardId));
-      const previous = payload?.cards.find((card) => card.id === cardId)?.priority ?? null;
+      const previous = findUnlockedCard(payload?.cards, cardId)?.priority ?? null;
       patchCard(queryClient, boardId, cardId, { priority });
       return { previous };
     },
@@ -526,7 +560,7 @@ export function useMoveCard(boardId: string, callbacks: MoveCardCallbacks) {
       void queryClient.cancelQueries({ queryKey: cardQueryKey(variables.card.id) });
       const payload = queryClient.getQueryData<BoardPayload>(key);
       const snapshot: MoveSnapshot = {
-        card: payload?.cards.find((card) => card.id === variables.card.id),
+        card: findUnlockedCard(payload?.cards, variables.card.id),
         detail: queryClient.getQueryData<CardDetail>(cardQueryKey(variables.card.id)),
       };
       const destination = {
@@ -538,7 +572,7 @@ export function useMoveCard(boardId: string, callbacks: MoveCardCallbacks) {
         const next = moveCardInPayload(payload, variables.card.id, destination);
         if (next) {
           queryClient.setQueryData(key, next);
-          const moved = next.cards.find((card) => card.id === variables.card.id);
+          const moved = findUnlockedCard(next.cards, variables.card.id);
           if (moved) {
             setCardDetail(queryClient, moved.id, (detail) => mergeSummary(detail, moved, next));
           }

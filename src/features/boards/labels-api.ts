@@ -104,7 +104,9 @@ export function useDeleteLabel(boardId: string) {
       setBoardData(queryClient, boardId, (current) => ({
         ...current,
         labels: current.labels.filter((label) => label.id !== labelId),
-        cards: current.cards.map((card) => ({ ...card, labelIds: without(card.labelIds) })),
+        cards: current.cards.map((card) =>
+          card.locked ? card : { ...card, labelIds: without(card.labelIds) },
+        ),
       }));
       queryClient.setQueriesData<CardDetail>({ queryKey: ['card'] }, (detail) =>
         detail && detail.boardId === boardId

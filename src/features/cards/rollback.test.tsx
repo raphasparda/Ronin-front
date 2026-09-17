@@ -12,7 +12,13 @@ import { createTestQueryClient } from '../../test/render';
 import { server } from '../../test/server';
 import { boardQueryKey } from '../boards/boards-api';
 import { myCardsQueryKey } from '../my-cards/my-cards-api';
-import { patchCard, restoreCardPlacement, useMoveCard } from './cards-api';
+import {
+  findUnlockedCard,
+  patchCard,
+  restoreCardPlacement,
+  unlockedCards,
+  useMoveCard,
+} from './cards-api';
 import { restoreMyCard, useCardCompletion } from './completion-api';
 
 /** Só o `id` importa para os helpers de Meus cards. */
@@ -40,9 +46,10 @@ async function seededClient() {
 }
 
 function cachedCard(queryClient: QueryClient, cardId: string) {
-  return queryClient
-    .getQueryData<BoardPayload>(boardQueryKey(BOARD_ID))
-    ?.cards.find((card) => card.id === cardId);
+  return findUnlockedCard(
+    queryClient.getQueryData<BoardPayload>(boardQueryKey(BOARD_ID))?.cards,
+    cardId,
+  );
 }
 
 function failAfter(path: string) {
@@ -59,11 +66,11 @@ function failAfter(path: string) {
 describe('rollback só do card afetado', () => {
   it('restoreCardPlacement devolve lugar e status sem tocar nos outros campos', async () => {
     const { payload } = await seededClient();
-    const budget = payload.cards.find((card) => card.id === CARD_IDS.budget);
+    const budget = findUnlockedCard(payload.cards, CARD_IDS.budget);
     if (!budget) throw new Error('fixture');
     const changed: BoardPayload = {
       ...payload,
-      cards: payload.cards.map((card) =>
+      cards: unlockedCards(payload.cards).map((card) =>
         card.id === budget.id
           ? { ...card, listId: LIST_IDS.done, position: 'zz', status: 'completed', title: 'Novo' }
           : { ...card, priority: 'urgent' },
@@ -78,7 +85,9 @@ describe('rollback só do card afetado', () => {
       title: 'Novo',
     });
     expect(
-      restored.cards.filter((card) => card.id !== budget.id).map((card) => card.priority),
+      unlockedCards(restored.cards)
+        .filter((card) => card.id !== budget.id)
+        .map((card) => card.priority),
     ).toEqual(changed.cards.filter((card) => card.id !== budget.id).map(() => 'urgent'));
 
     const removed = { ...payload, cards: payload.cards.filter((card) => card.id !== budget.id) };
@@ -100,7 +109,7 @@ describe('rollback só do card afetado', () => {
     const { result } = renderHook(() => useMoveCard(BOARD_ID, { onSuccess: vi.fn(), onError }), {
       wrapper: wrapperFor(queryClient),
     });
-    const budget = payload.cards.find((card) => card.id === CARD_IDS.budget);
+    const budget = findUnlockedCard(payload.cards, CARD_IDS.budget);
     if (!budget) throw new Error('fixture');
 
     act(() =>
@@ -129,7 +138,7 @@ describe('rollback só do card afetado', () => {
     const { queryClient, payload } = await seededClient();
     const myCards = [myCard(CARD_IDS.budget, 'Revisar'), myCard(CARD_IDS.campaign, 'Publicar')];
     queryClient.setQueryData(myCardsQueryKey, myCards);
-    const campaign = payload.cards.find((card) => card.id === CARD_IDS.campaign);
+    const campaign = findUnlockedCard(payload.cards, CARD_IDS.campaign);
     if (!campaign) throw new Error('fixture');
     const gate = failAfter('/api/cards/:cardId/complete');
     const { result } = renderHook(() => useCardCompletion(), {

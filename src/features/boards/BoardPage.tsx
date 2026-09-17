@@ -1,4 +1,4 @@
-import { matchesBoardFilter, type Board, type BoardPayload } from '@raphasparda/ronin-shared';
+import type { Board, BoardPayload } from '@raphasparda/ronin-shared';
 import {
   Archive,
   ArchiveRestore,
@@ -34,6 +34,7 @@ import { toast } from '../../components/ui/toast-store';
 import { isApiError } from '../../lib/api-client';
 import { useSessionUser } from '../auth/auth-api';
 import { CardFaceDataProvider, useCardFaceData } from '../cards/card-face-data';
+import { RESTRICTION_MESSAGES } from '../cards/card-messages';
 import { ArchivedItemsDialog } from './ArchivedItemsDialog';
 import { useBoardErrorHandler } from './board-errors';
 import { BoardLists, LIST_MESSAGES } from './BoardLists';
@@ -41,7 +42,7 @@ import { useArchiveBoard, useBoard, useRenameBoard, useRestoreBoard } from './bo
 import { BoardFilterBar, FilterStatus, useFilterOptions } from './BoardFilterBar';
 import { DeleteBoardDialog } from './DeleteBoardDialog';
 import { LabelsDialog } from './LabelsDialog';
-import { countActiveCriteria, useBoardFilter } from './use-board-filter';
+import { countActiveCriteria, matchesBoardCard, useBoardFilter } from './use-board-filter';
 
 /** Espaço invisível: faz o leitor de tela repetir um anúncio igual ao anterior. */
 const REPEAT_MARK = '\u00a0';
@@ -206,10 +207,12 @@ function BoardFilters({ payload, visible, barId, searchRef, filter }: BoardFilte
   const { now } = useCardFaceData();
   if (!visible) return null;
 
+  // Cards bloqueados contam no total do quadro, mesmo sem casar com os filtros (scope §11 F4).
   const total = payload.cards.length;
   const matching = filter.active
-    ? payload.cards.filter((card) => matchesBoardFilter(card, filter.filter, now)).length
+    ? payload.cards.filter((card) => matchesBoardCard(card, filter.filter, now)).length
     : total;
+  const hasLockedCards = payload.cards.some((card) => card.locked);
 
   return (
     <div className="flex flex-col gap-3">
@@ -230,6 +233,7 @@ function BoardFilters({ payload, visible, barId, searchRef, filter }: BoardFilte
           onClear={filter.clear}
         />
       )}
+      {hasLockedCards && <p className="text-xs text-muted">{RESTRICTION_MESSAGES.filterNote}</p>}
       {filter.active && matching === 0 && total > 0 && (
         <EmptyState
           icon={SearchX}

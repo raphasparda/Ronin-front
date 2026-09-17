@@ -1,7 +1,6 @@
 import {
   cardsCompletedByMarkingDoneList,
   findDoneList,
-  matchesBoardFilter,
   PALETTE_LABELS,
   PRIORITY_LABELS,
   placementForPosition,
@@ -53,7 +52,13 @@ import {
 } from '../cards/card-drag';
 import { useCardFaceData } from '../cards/card-face-data';
 import { CardFaceOverlay, type CardFaceActions } from '../cards/CardFace';
-import { useCreateCard, usePendingCardIds, useSetCardPriority } from '../cards/cards-api';
+import {
+  findUnlockedCard,
+  unlockedCards,
+  useCreateCard,
+  usePendingCardIds,
+  useSetCardPriority,
+} from '../cards/cards-api';
 import { MoveCardDialog } from '../cards/MoveCardDialog';
 import { useCardArchiving, useCardCompletionAction, useCardMover } from '../cards/use-card-actions';
 import { AddListForm } from './AddListForm';
@@ -66,6 +71,7 @@ import {
   useUpdateList,
 } from './boards-api';
 import { ListColumn, type ListColumnActions } from './ListColumn';
+import { matchesBoardCard } from './use-board-filter';
 
 export const LIST_MESSAGES = {
   emptyName: 'O nome não pode ficar vazio.',
@@ -173,7 +179,11 @@ export function BoardLists({
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [colorListId, setColorListId] = useState<string | null>(null);
-  const [confirmDone, setConfirmDone] = useState<{ list: List; count: number } | null>(null);
+  const [confirmDone, setConfirmDone] = useState<{
+    list: List;
+    count: number;
+    restricted: number;
+  } | null>(null);
   const [confirmArchive, setConfirmArchive] = useState<{ list: List; count: number } | null>(null);
 
   const colorList = lists.find((list) => list.id === colorListId) ?? null;
@@ -199,7 +209,7 @@ export function BoardLists({
   const visibleCards = useMemo(() => {
     if (!filter) return payload.cards;
     return payload.cards.filter(
-      (card) => pendingCardIds.has(card.id) || matchesBoardFilter(card, filter, now),
+      (card) => pendingCardIds.has(card.id) || matchesBoardCard(card, filter, now),
     );
   }, [filter, now, payload.cards, pendingCardIds]);
   const cardOrder = useMemo(
@@ -267,7 +277,7 @@ export function BoardLists({
 
   const dropCard = (cardId: string, over: Over | null) => {
     const original = dragStartOrder.current;
-    const card = cardsById.get(cardId);
+    const card = findUnlockedCard(payload.cards, cardId);
     const drop =
       original && dragOrder && over
         ? resolveCardDrop(
@@ -335,7 +345,7 @@ export function BoardLists({
     }
   };
 
-  const activeCard = activeCardId ? cardsById.get(activeCardId) : undefined;
+  const activeCard = activeCardId ? findUnlockedCard(payload.cards, activeCardId) : undefined;
   const activeCardColor = lists.find((list) => list.id === activeCard?.listId)?.color ?? 'gray';
 
   const move = (list: List, targetIndex: number) => {
@@ -426,9 +436,14 @@ export function BoardLists({
         );
         return;
       }
-      const count = cardsCompletedByMarkingDoneList(payload.cards, list.id).length;
-      if (count === 0) applyDone(list);
-      else setConfirmDone({ list, count });
+      const count = cardsCompletedByMarkingDoneList(unlockedCards(payload.cards), list.id).length;
+      // Cards bloqueados desta lista também são concluídos (RN36), mas o front não sabe o
+      // status deles: em vez de contar, a confirmação avisa.
+      const restricted = payload.cards.filter(
+        (card) => card.locked && card.listId === list.id,
+      ).length;
+      if (count === 0 && restricted === 0) applyDone(list);
+      else setConfirmDone({ list, count, restricted });
     },
     onMove: move,
     onArchive: (list) => {
@@ -548,15 +563,22 @@ export function BoardLists({
         description={
           confirmDone && (
             <>
-              <p>
-                {confirmDone.count === 1
-                  ? 'O card aberto desta lista será marcado como concluído, com a conclusão registrada em seu nome.'
-                  : `Os ${confirmDone.count} cards abertos desta lista serão marcados como concluídos, com a conclusão registrada em seu nome.`}
-              </p>
+              {confirmDone.count > 0 && (
+                <p>
+                  {confirmDone.count === 1
+                    ? 'O card aberto desta lista será marcado como concluído, com a conclusão registrada em seu nome.'
+                    : `Os ${confirmDone.count} cards abertos desta lista serão marcados como concluídos, com a conclusão registrada em seu nome.`}
+                </p>
+              )}
               {currentDone && currentDone.id !== confirmDone.list.id && (
                 <p>
                   A lista {currentDone.name} deixa de ser a lista de conclusão. Os cards que estão
                   nela continuam concluídos.
+                </p>
+              )}
+              {confirmDone.restricted > 0 && (
+                <p>
+                  Cards restritos desta lista aos quais você não tem acesso também são concluídos.
                 </p>
               )}
               <p>
@@ -566,7 +588,11 @@ export function BoardLists({
             </>
           )
         }
-        confirmLabel={`Marcar e concluir ${cardCountLabel(confirmDone?.count ?? 0)}`}
+        confirmLabel={
+          confirmDone && confirmDone.count > 0
+            ? `Marcar e concluir ${cardCountLabel(confirmDone.count)}`
+            : 'Marcar como lista de conclusão'
+        }
         pending={updateList.isPending}
         pendingLabel="Marcando…"
         onConfirm={() => confirmDone && applyDone(confirmDone.list)}

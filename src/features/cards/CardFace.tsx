@@ -4,6 +4,7 @@ import {
   PRIORITY_LABELS,
   type CardPriority,
   type CardSummary,
+  type LockedCard,
   type PaletteColor,
 } from '@raphasparda/ronin-shared';
 import { useSortable } from '@dnd-kit/sortable';
@@ -15,6 +16,7 @@ import {
   Check,
   ExternalLink,
   ListChecks,
+  Lock,
   LoaderCircle,
   MessageSquare,
   MoreHorizontal,
@@ -35,9 +37,12 @@ import { LabelPill } from '../../components/ui/LabelPill';
 import { Menu, MenuGroupLabel, MenuItem, MenuSeparator } from '../../components/ui/Menu';
 import { Pill } from '../../components/ui/Pill';
 import { PriorityBadge } from '../../components/ui/PriorityBadge';
+import { toast } from '../../components/ui/toast-store';
 import { describeDue, type DueDisplay } from '../../lib/due';
 import { displayName } from '../users/users-api';
 import { useCardFaceData, type CardFaceData } from './card-face-data';
+import { CardCoverThumb } from './CardCoverImage';
+import { RESTRICTION_MESSAGES } from './card-messages';
 import { CARD_LINK_STATE, cardPath, isCardJustCreated } from './cards-api';
 
 export interface CardFaceActions {
@@ -67,6 +72,7 @@ export function cardFaceLabel(
   const people = card.assigneeIds.map((id) => displayName(data.usersById.get(id)));
   return [
     card.title,
+    card.visibility === 'restricted' ? RESTRICTION_MESSAGES.lockedBadge : null,
     labels.length > 0 ? `Etiquetas: ${labels.join(', ')}` : null,
     card.priority
       ? `Prioridade ${PRIORITY_LABELS[card.priority].toLocaleLowerCase('pt-BR')}`
@@ -105,6 +111,9 @@ function FaceContent({
 
   return (
     <span aria-hidden className="flex flex-col gap-2">
+      {card.cover && (
+        <CardCoverThumb url={card.cover.url} width={card.cover.width} height={card.cover.height} />
+      )}
       {labels.length > 0 && (
         <span className="flex flex-wrap gap-1">
           {labels.slice(0, MAX_LABELS).map((label) => (
@@ -117,7 +126,12 @@ function FaceContent({
           )}
         </span>
       )}
-      <span className="line-clamp-3 font-medium break-words">{card.title}</span>
+      <span className="flex items-start gap-1.5">
+        {card.visibility === 'restricted' && (
+          <Lock size={14} className="mt-1 shrink-0 text-muted" />
+        )}
+        <span className="line-clamp-3 font-medium break-words">{card.title}</span>
+      </span>
       {hasPills && (
         <span className="flex flex-wrap gap-1">
           <PriorityBadge priority={card.priority} srPrefix={false} />
@@ -179,6 +193,40 @@ export function CardFaceOverlay({ card, color }: { card: CardSummary; color: Pal
       className={`drag-overlay w-full rotate-2 cursor-grabbing shadow-lg ${FACE_CLASS}`}
     >
       <FaceContent card={card} data={data} due={describeDue(card, data.timeZone, data.now)} />
+    </div>
+  );
+}
+
+/**
+ * Face de um card restrito ao qual a pessoa não tem acesso (ADR 0015, scope §11 F3): título e
+ * cadeado, e nada mais — sem capa, etiquetas, prioridade, prazo, responsáveis nem contadores.
+ * Não é link, não tem menu e não arrasta; é focável e explica o motivo ao ser acionada.
+ */
+export function LockedCardFace({ card, color }: { card: LockedCard; color: PaletteColor }) {
+  // Continua recebendo cards arrastados (ele ocupa uma posição na lista), mas não é arrastável.
+  const { setNodeRef, transform, transition } = useSortable({
+    id: card.id,
+    data: { type: 'card' },
+    disabled: { draggable: true, droppable: false },
+  });
+
+  return (
+    <div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform), transition }}>
+      <button
+        type="button"
+        aria-label={RESTRICTION_MESSAGES.lockedFace(card.title)}
+        onClick={() => toast.info(RESTRICTION_MESSAGES.lockedClick)}
+        style={listMark(color)}
+        className={`focus-inset w-full cursor-default text-left ${FACE_CLASS}`}
+      >
+        <span aria-hidden className="flex items-start gap-2">
+          <Lock size={14} className="mt-1 shrink-0 text-muted" />
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="line-clamp-3 font-medium break-words">{card.title}</span>
+            <span className="text-xs text-muted">{RESTRICTION_MESSAGES.lockedBadge}</span>
+          </span>
+        </span>
+      </button>
     </div>
   );
 }

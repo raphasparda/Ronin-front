@@ -1,5 +1,5 @@
-import type { ArchivedCard, BoardPayload, List } from '@raphasparda/ronin-shared';
-import { Archive, RotateCcw, Trash2 } from 'lucide-react';
+import type { ArchivedCard, BoardPayload, List, LockedCard } from '@raphasparda/ronin-shared';
+import { Archive, Lock, RotateCcw, Trash2 } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 
 import { Button } from '../../components/ui/Button';
@@ -10,7 +10,7 @@ import { ListSkeleton, LoadError } from '../../components/ui/QueryState';
 import { tabPanelProps, Tabs } from '../../components/ui/Tabs';
 import { toast } from '../../components/ui/toast-store';
 import { useSessionUser } from '../auth/auth-api';
-import { CARD_MESSAGES } from '../cards/card-messages';
+import { CARD_MESSAGES, RESTRICTION_MESSAGES } from '../cards/card-messages';
 import { useDeleteCard } from '../cards/cards-api';
 import { useCardArchiving } from '../cards/use-card-actions';
 import { useBoardErrorHandler } from './board-errors';
@@ -100,6 +100,58 @@ function ArchivedCardRow({
   );
 }
 
+/**
+ * Card restrito arquivado, para quem não tem acesso (scope §11 F4): título, pílula "Arquivado" e
+ * cadeado, sem a lista de origem. Restaurar e excluir ficam desabilitados, com o motivo.
+ */
+function LockedArchivedCardRow({ card, isAdmin }: { card: LockedCard; isAdmin: boolean }) {
+  const hintId = useId();
+
+  return (
+    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span className="flex items-start gap-1.5 font-medium break-words">
+          <Lock aria-hidden size={14} className="mt-1 shrink-0 text-muted" />
+          {card.title}
+        </span>
+        <span className="flex flex-wrap items-center gap-1.5">
+          <Pill status="archived" icon={<Archive size={12} />}>
+            Arquivado
+          </Pill>
+          <Pill>{RESTRICTION_MESSAGES.lockedBadge}</Pill>
+        </span>
+        <p id={hintId} className="text-xs text-muted">
+          {RESTRICTION_MESSAGES.lockedArchived}
+        </p>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<RotateCcw size={14} />}
+          aria-label={`Restaurar card ${card.title}`}
+          aria-describedby={hintId}
+          disabled
+        >
+          Restaurar
+        </Button>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<Trash2 size={14} />}
+            aria-label={`Excluir card ${card.title}`}
+            aria-describedby={hintId}
+            disabled
+          >
+            Excluir
+          </Button>
+        )}
+      </div>
+    </li>
+  );
+}
+
 /** "Itens arquivados…" (screens §7.7): abas Cards e Listas, com restaurar e excluir (Admin). */
 export function ArchivedItemsDialog({
   payload,
@@ -131,19 +183,23 @@ export function ArchivedItemsDialog({
         <p className="text-muted">Nenhum card arquivado.</p>
       ) : (
         <ul aria-label="Cards arquivados" className="flex flex-col divide-y divide-border">
-          {items.data.cards.map((card) => (
-            <ArchivedCardRow
-              key={card.id}
-              card={card}
-              doneList={activeList(card.listId)?.isDoneList ?? false}
-              listColor={activeList(card.listId)?.color}
-              readOnly={readOnly}
-              isAdmin={isAdmin}
-              restoring={archiving.restoringId === card.id}
-              onRestore={() => archiving.restore({ card, listName: card.listName })}
-              onDelete={() => setDeleting(card)}
-            />
-          ))}
+          {items.data.cards.map((card) =>
+            card.locked ? (
+              <LockedArchivedCardRow key={card.id} card={card} isAdmin={isAdmin} />
+            ) : (
+              <ArchivedCardRow
+                key={card.id}
+                card={card}
+                doneList={activeList(card.listId)?.isDoneList ?? false}
+                listColor={activeList(card.listId)?.color}
+                readOnly={readOnly}
+                isAdmin={isAdmin}
+                restoring={archiving.restoringId === card.id}
+                onRestore={() => archiving.restore({ card, listName: card.listName })}
+                onDelete={() => setDeleting(card)}
+              />
+            ),
+          )}
         </ul>
       );
   } else {

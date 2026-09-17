@@ -61,3 +61,81 @@ export const CARD_MESSAGES = {
   notFound: 'Card não encontrado',
   notFoundDescription: 'Ele pode ter sido excluído.',
 } as const;
+
+/** Cards restritos (scope §11.11). O cadeado sempre vem com texto (RN17). */
+export const RESTRICTION_MESSAGES = {
+  lockedBadge: 'Card restrito',
+  lockedFace: (title: string) => `Card restrito: ${title}. Você não tem acesso.`,
+  lockedClick:
+    'Card restrito. Só quem está na lista de acesso pode abrir. Fale com quem participa do card ou com um administrador.',
+  lockedDrag: 'Card restrito. Você não pode mover este card.',
+  lockedArchived: 'Você não tem acesso a este card.',
+  noAccessTitle: 'Você não tem acesso a este card',
+  lostAccess: 'Você não tem mais acesso a este card.',
+  panelTitle: 'Quem pode ver este card',
+  team: 'Visível para a equipe',
+  teamHelp: 'Todos os membros podem abrir, editar e comentar.',
+  restricted: 'Restrito a pessoas específicas',
+  restrictedHelp: 'Só quem estiver na lista (e os administradores) pode abrir o card.',
+  restrictedWarning:
+    'O card continua aparecendo no quadro para todo mundo, com o título e um cadeado. Evite informação sensível no título.',
+  adminsAlways: 'Administradores sempre têm acesso.',
+  adminOutsideList: 'Você vê este card porque é administrador.',
+  emptyList:
+    'Este card restrito está sem pessoas. Adicione alguém ou torne o card visível para a equipe.',
+  assigneeBadge: 'Responsável',
+  addPerson: 'Adicionar pessoa',
+  searchPerson: 'Buscar pessoa',
+  noPeopleFound: 'Ninguém encontrado com esse nome.',
+  removeAccess: (name: string) => `Remover acesso de ${name}`,
+  restrictedNow: (count: number) =>
+    count === 1
+      ? 'Card restrito. 1 pessoa tem acesso.'
+      : `Card restrito. ${count} pessoas têm acesso.`,
+  teamNow: 'Card visível para a equipe.',
+  added: (name: string) => `${name} agora tem acesso a este card.`,
+  removed: (name: string) => `${name} não tem mais acesso a este card.`,
+  assigneeGainedAccess: (name: string) =>
+    `${name} foi adicionada aos responsáveis e ganhou acesso a este card.`,
+  isAssignee: (name: string) =>
+    `${name} é responsável por este card. Remova a pessoa dos responsáveis antes de tirar o acesso.`,
+  lastPerson:
+    'A lista precisa ter pelo menos uma pessoa. Adicione alguém ou torne o card visível para a equipe.',
+  leaveTitle: 'Tirar o seu acesso a este card?',
+  leaveDescription:
+    'Você não vai mais conseguir abrir o card, e só quem ficou na lista ou um administrador pode devolver o acesso.',
+  leaveConfirm: 'Sair do card',
+  boardArchived: 'Este quadro está arquivado. Restaure o quadro para mudar quem vê este card.',
+  notRestricted: 'Este card voltou a ser visível para a equipe.',
+  userNotActive: 'Essa pessoa foi desativada e não pode receber acesso.',
+  visibilityFailed: 'Não foi possível alterar quem vê este card. Tente de novo.',
+  viewerFailed: 'Não foi possível alterar a lista de acesso. Tente de novo.',
+  filterNote:
+    'Cards restritos aos quais você não tem acesso não entram nos filtros de responsável, etiqueta, prioridade e prazo.',
+} as const;
+
+/** Capa do card (scope §11.11). */
+export const COVER_MESSAGES = {
+  add: 'Adicionar capa',
+  replace: 'Trocar capa',
+  remove: 'Remover capa',
+  help: 'JPEG, PNG ou WebP, até 5 MB.',
+  choose: 'Escolher um arquivo de imagem',
+  uploading: (percent: number | null) =>
+    percent === null ? 'Enviando capa…' : `Enviando capa… ${percent}%`,
+  added: 'Capa adicionada.',
+  replaced: 'Capa trocada.',
+  removed: 'Capa removida.',
+  confirmRemoveTitle: 'Remover a capa deste card?',
+  confirmRemoveDescription: 'A imagem é apagada e não dá para desfazer.',
+  wrongType: 'Formato não aceito. Use JPEG, PNG ou WebP.',
+  tooLarge: (megabytes: string) => `A imagem tem ${megabytes} MB. O limite é 5 MB.`,
+  unreadable: 'Não conseguimos ler esta imagem. Tente outro arquivo.',
+  uploadFailed: 'Não foi possível enviar a capa. Tente de novo.',
+  removeFailed: 'Não foi possível remover a capa. Tente de novo.',
+  loadFailed: 'Não foi possível carregar a capa.',
+  reload: 'Recarregar',
+  boardArchived: 'Este quadro está arquivado. Restaure o quadro para mudar a capa.',
+  storageUnavailable: 'As capas de card não estão disponíveis agora.',
+  detailAlt: 'Capa do card',
+} as const;

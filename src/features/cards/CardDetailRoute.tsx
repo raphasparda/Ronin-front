@@ -5,6 +5,7 @@ import {
   ArrowRightLeft,
   ChevronRight,
   Link2,
+  Lock,
   MoreHorizontal,
   RotateCcw,
   SearchX,
@@ -36,8 +37,10 @@ import { CardChecklists } from './CardChecklists';
 import { CardCompletion } from './CardCompletion';
 import { CardComments } from './CardComments';
 import { CardDescription, DiscardDescriptionDialog } from './CardDescription';
+import { CardCoverPreview } from './CardCoverImage';
 import { CardAssigneesField, CardDueField, CardLabelsField, CardPriorityField } from './CardFields';
-import { CARD_MESSAGES } from './card-messages';
+import { CardVisibilityPanel } from './CardVisibilityPanel';
+import { CARD_MESSAGES, RESTRICTION_MESSAGES } from './card-messages';
 import {
   cardPath,
   toCardSummary,
@@ -210,6 +213,15 @@ function CardDetailView({ card, onClose }: CardDetailViewProps) {
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {card.cover && (
+            <div className="px-4 pt-4 sm:px-5">
+              <CardCoverPreview
+                url={card.cover.url}
+                width={card.cover.width}
+                height={card.cover.height}
+              />
+            </div>
+          )}
           <div className="flex flex-col gap-2 px-4 pt-4 sm:px-5">
             <CardTitle
               id={titleId}
@@ -219,8 +231,14 @@ function CardDetailView({ card, onClose }: CardDetailViewProps) {
               onSave={saveTitle}
               onEmpty={() => toast.error(CARD_MESSAGES.emptyTitle)}
             />
-            {(card.priority !== null || card.dueAt !== null || card.status === 'completed') && (
+            {(card.priority !== null ||
+              card.dueAt !== null ||
+              card.status === 'completed' ||
+              card.visibility === 'restricted') && (
               <div className="flex flex-wrap gap-2">
+                {card.visibility === 'restricted' && (
+                  <Pill icon={<Lock size={12} />}>{RESTRICTION_MESSAGES.lockedBadge}</Pill>
+                )}
                 <PriorityBadge priority={card.priority} />
                 <DuePill card={card} timeZone={timeZone} now={now} />
               </div>
@@ -333,6 +351,12 @@ function CardDetailView({ card, onClose }: CardDetailViewProps) {
                 board={board.data}
                 readOnly={readOnly}
                 announce={announce}
+              />
+              <CardVisibilityPanel
+                card={card}
+                readOnly={boardArchived}
+                announce={announce}
+                onLostAccess={onClose}
               />
               {readOnly ? (
                 <p className="border-t border-border pt-4 text-muted">
@@ -456,9 +480,20 @@ export function CardDetailRoute() {
   if (card.isError) {
     const notFound =
       isApiError(card.error) && (card.error.status === 404 || card.error.status === 400);
+    const restricted = isApiError(card.error) && card.error.code === 'CARD_RESTRICTED';
     return (
       <DetailState onClose={close}>
-        {notFound ? (
+        {restricted ? (
+          <EmptyState
+            icon={Lock}
+            title={RESTRICTION_MESSAGES.noAccessTitle}
+            description={
+              // Perdeu o acesso com o card aberto (F9) ou nunca teve (link direto/cadeado).
+              card.data ? RESTRICTION_MESSAGES.lostAccess : RESTRICTION_MESSAGES.lockedClick
+            }
+            action={<Button onClick={close}>Voltar para o quadro</Button>}
+          />
+        ) : notFound ? (
           <EmptyState
             icon={SearchX}
             title={CARD_MESSAGES.notFound}

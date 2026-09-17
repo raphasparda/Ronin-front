@@ -297,6 +297,7 @@ export const adminHandlers = [
           role: 'member',
         },
         workspace: adminDb.workspace,
+        features: sessionFixture.features,
       }),
       { status: 201 },
     );

@@ -1,7 +1,7 @@
 import {
   placementForPosition,
   sortByPosition,
-  type CardSummary,
+  type BoardCard,
   type List,
   type Placement,
 } from '@raphasparda/ronin-shared';
@@ -14,7 +14,8 @@ export type DragTarget = { type: 'card'; id: string } | { type: 'list-body'; lis
 
 export const listBodyDroppableId = (listId: string) => `lista:${listId}`;
 
-export function buildCardOrder(lists: readonly List[], cards: readonly CardSummary[]): CardOrder {
+/** Inclui cards bloqueados: eles ocupam posição na lista e servem de vizinho no `placement`. */
+export function buildCardOrder(lists: readonly List[], cards: readonly BoardCard[]): CardOrder {
   const order: CardOrder = Object.fromEntries(lists.map((list) => [list.id, [] as string[]]));
   for (const card of sortByPosition(cards)) order[card.listId]?.push(card.id);
   return order;

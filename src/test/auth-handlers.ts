@@ -20,7 +20,14 @@ export const sessionFixture: AuthSessionResponse = authSessionResponseSchema.par
     role: 'admin',
   },
   workspace: { name: 'Equipe Ronin', timezone: 'America/Sao_Paulo' },
+  features: { cardCovers: true },
 });
+
+/** Instância sem R2 configurado: a UI não oferece capa (ADR 0016). */
+export const sessionWithoutCovers: AuthSessionResponse = {
+  ...sessionFixture,
+  features: { cardCovers: false },
+};
 
 interface ErrorInit {
   message?: string;
@@ -96,6 +103,7 @@ export const authHandlers = {
         authSessionResponseSchema.parse({
           user: { ...sessionFixture.user, name, email },
           workspace: { name: workspaceName, timezone },
+          features: sessionFixture.features,
         }),
         { status: 201 },
       );

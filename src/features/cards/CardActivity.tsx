@@ -111,6 +111,22 @@ export function activityPhrase(activity: Activity, ctx: ActivityContext): ReactN
       return 'arquivou o card';
     case 'card_restored':
       return 'restaurou o card';
+    case 'card_visibility_changed':
+      return activity.data.to === 'restricted'
+        ? 'restringiu o card a pessoas específicas'
+        : 'deixou o card visível para a equipe';
+    case 'card_viewer_added':
+      return activity.data.userId === activity.actorId
+        ? 'entrou na lista de acesso'
+        : `deu acesso a ${ctx.userName(activity.data.userId)}`;
+    case 'card_viewer_removed':
+      return activity.data.userId === activity.actorId
+        ? 'saiu da lista de acesso'
+        : `tirou o acesso de ${ctx.userName(activity.data.userId)}`;
+    case 'card_cover_changed':
+      return 'alterou a capa do card';
+    case 'card_cover_removed':
+      return 'removeu a capa do card';
   }
 }
 

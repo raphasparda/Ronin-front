@@ -9,6 +9,7 @@ export const BOARD_ERROR_MESSAGES = {
   boardArchived: 'Este quadro foi arquivado. Restaure o quadro para editar.',
   listArchived: 'Esta lista foi arquivada. O quadro foi atualizado.',
   notFound: 'Não encontramos este item. Ele pode ter sido excluído. O quadro foi atualizado.',
+  cardRestricted: 'Você não tem mais acesso a este card. O quadro foi atualizado.',
 } as const;
 
 /**
@@ -46,6 +47,10 @@ export function handleBoardError(
       return;
     case 'NOT_FOUND':
       toast.error(BOARD_ERROR_MESSAGES.notFound);
+      refresh();
+      return;
+    case 'CARD_RESTRICTED':
+      toast.error(BOARD_ERROR_MESSAGES.cardRestricted);
       refresh();
       return;
     case 'FORBIDDEN':

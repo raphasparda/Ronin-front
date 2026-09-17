@@ -10,7 +10,7 @@ import { http, HttpResponse } from 'msw';
 
 import { MEMBER_ID, type RecordedRequest } from './admin-handlers';
 import { apiErrorResponse } from './auth-handlers';
-import { BOARD_ID, CARD_IDS } from './board-handlers';
+import { BOARD_ID, canOpenCard, CARD_IDS } from './board-handlers';
 
 interface NotificationDb {
   notifications: Notification[];
@@ -52,7 +52,14 @@ export function seedNotifications(notifications: readonly Notification[]): void 
   notificationDb.notifications.push(...notifications);
 }
 
-const unreadCount = () => notificationDb.notifications.filter((item) => !item.readAt).length;
+/**
+ * Notificações visíveis agora (RN40): as de card sem acesso somem da lista e do contador, sem
+ * serem apagadas — voltam quando o acesso volta.
+ */
+const visibleNotifications = () =>
+  notificationDb.notifications.filter((item) => canOpenCard(item.card.id));
+
+const unreadCount = () => visibleNotifications().filter((item) => !item.readAt).length;
 
 function validationError() {
   return apiErrorResponse('VALIDATION_ERROR', { message: 'Dados inválidos.' });
@@ -70,7 +77,7 @@ export const notificationHandlers = [
     if (!query.success) return validationError();
     notificationDb.requests.push({ method: 'GET', path: 'notifications', body: query.data });
     const { limit, before } = query.data;
-    const sorted = [...notificationDb.notifications]
+    const sorted = [...visibleNotifications()]
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .filter((item) => before === undefined || item.createdAt < before);
     const page = sorted.slice(0, limit);
