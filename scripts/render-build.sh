@@ -43,6 +43,10 @@ REUSE_CLONE=no
 if [ -e "$API_DIR" ]; then
   if [ -d "$API_DIR/.git" ] && [ -f "$API_DIR/packages/shared/package.json" ]; then
     REUSE_CLONE=yes
+  elif [ "${RENDER:-}" = true ]; then
+    # No Render a pasta do projeto sobrevive entre builds: um clone interrompido vira lixo.
+    log "Removendo cópia incompleta em $API_DIR"
+    rm -rf "$API_DIR"
   else
     fail "$API_DIR já existe e não é um clone do ronin-api. Remova a pasta antes do build."
   fi
