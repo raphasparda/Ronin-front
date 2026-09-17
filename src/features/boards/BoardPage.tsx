@@ -1,16 +1,24 @@
-import type { Board, BoardPayload } from '@raphasparda/ronin-shared';
+import {
+  matchesBoardFilter,
+  type Board,
+  type BoardDetail,
+  type BoardPayload,
+} from '@raphasparda/ronin-shared';
 import {
   Archive,
   ArchiveRestore,
   ArrowLeft,
   FolderArchive,
+  Image as ImageIcon,
   ListFilter,
+  Lock,
   MoreHorizontal,
   Pencil,
   RotateCcw,
   SearchX,
   Tag,
   Trash2,
+  Users,
 } from 'lucide-react';
 import {
   useCallback,
@@ -34,15 +42,19 @@ import { toast } from '../../components/ui/toast-store';
 import { isApiError } from '../../lib/api-client';
 import { useSessionUser } from '../auth/auth-api';
 import { CardFaceDataProvider, useCardFaceData } from '../cards/card-face-data';
-import { RESTRICTION_MESSAGES } from '../cards/card-messages';
 import { ArchivedItemsDialog } from './ArchivedItemsDialog';
+import { useBoardCoversEnabled } from './board-cover-api';
 import { useBoardErrorHandler } from './board-errors';
+import { RESTRICTION_MESSAGES, COVER_MESSAGES } from './board-messages';
+import { BoardCoverBanner } from './BoardCoverImage';
+import { BoardCoverDialog } from './BoardCoverDialog';
 import { BoardLists, LIST_MESSAGES } from './BoardLists';
+import { BoardVisibilityDialog } from './BoardVisibilityDialog';
 import { useArchiveBoard, useBoard, useRenameBoard, useRestoreBoard } from './boards-api';
 import { BoardFilterBar, FilterStatus, useFilterOptions } from './BoardFilterBar';
 import { DeleteBoardDialog } from './DeleteBoardDialog';
 import { LabelsDialog } from './LabelsDialog';
-import { countActiveCriteria, matchesBoardCard, useBoardFilter } from './use-board-filter';
+import { countActiveCriteria, useBoardFilter } from './use-board-filter';
 
 /** Espaço invisível: faz o leitor de tela repetir um anúncio igual ao anterior. */
 const REPEAT_MARK = '\u00a0';
@@ -78,11 +90,13 @@ function BoardSkeleton() {
 }
 
 interface BoardHeaderProps {
-  board: Board;
+  board: BoardDetail;
   readOnly: boolean;
   filterToggle: ReactNode;
   onOpenLabels: () => void;
   onOpenArchived: () => void;
+  onOpenCover: () => void;
+  onOpenVisibility: () => void;
   onArchive: () => void;
   onRestore: () => void;
   onDelete: () => void;
@@ -94,11 +108,14 @@ function BoardHeader({
   filterToggle,
   onOpenLabels,
   onOpenArchived,
+  onOpenCover,
+  onOpenVisibility,
   onArchive,
   onRestore,
   onDelete,
 }: BoardHeaderProps) {
   const isAdmin = useSessionUser()?.role === 'admin';
+  const coversEnabled = useBoardCoversEnabled();
   const rename = useRenameBoard(board.id);
   const handleError = useBoardErrorHandler(board.id);
   const [renaming, setRenaming] = useState(false);
@@ -126,6 +143,9 @@ function BoardHeader({
       ) : (
         <h1 className="min-w-0 text-xl break-words">{board.name}</h1>
       )}
+      {board.visibility === 'restricted' && (
+        <Pill icon={<Lock size={12} />}>{RESTRICTION_MESSAGES.lockedBadge}</Pill>
+      )}
       {!readOnly && !renaming && (
         <button
           type="button"
@@ -149,6 +169,14 @@ function BoardHeader({
           </MenuItem>
           <MenuItem icon={<FolderArchive size={16} />} onSelect={onOpenArchived}>
             Itens arquivados…
+          </MenuItem>
+          {coversEnabled && (
+            <MenuItem icon={<ImageIcon size={16} />} onSelect={onOpenCover}>
+              {COVER_MESSAGES.menuItem}
+            </MenuItem>
+          )}
+          <MenuItem icon={<Users size={16} />} onSelect={onOpenVisibility}>
+            {RESTRICTION_MESSAGES.menuItem}
           </MenuItem>
           <MenuSeparator />
           {readOnly ? (
@@ -207,12 +235,10 @@ function BoardFilters({ payload, visible, barId, searchRef, filter }: BoardFilte
   const { now } = useCardFaceData();
   if (!visible) return null;
 
-  // Cards bloqueados contam no total do quadro, mesmo sem casar com os filtros (scope §11 F4).
   const total = payload.cards.length;
   const matching = filter.active
-    ? payload.cards.filter((card) => matchesBoardCard(card, filter.filter, now)).length
+    ? payload.cards.filter((card) => matchesBoardFilter(card, filter.filter, now)).length
     : total;
-  const hasLockedCards = payload.cards.some((card) => card.locked);
 
   return (
     <div className="flex flex-col gap-3">
@@ -233,7 +259,6 @@ function BoardFilters({ payload, visible, barId, searchRef, filter }: BoardFilte
           onClear={filter.clear}
         />
       )}
-      {hasLockedCards && <p className="text-xs text-muted">{RESTRICTION_MESSAGES.filterNote}</p>}
       {filter.active && matching === 0 && total > 0 && (
         <EmptyState
           icon={SearchX}
@@ -265,6 +290,8 @@ function BoardView() {
   const [deleting, setDeleting] = useState<Board | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
 
   const location = useLocation();
   const urlFilter = useBoardFilter();
@@ -306,6 +333,21 @@ function BoardView() {
   if (board.isPending) return <BoardSkeleton />;
 
   if (board.isError) {
+    // Quadro restrito sem acesso: 403 `BOARD_RESTRICTED` (ADR 0015), inclusive por link direto.
+    if (isApiError(board.error) && board.error.code === 'BOARD_RESTRICTED') {
+      return (
+        <div className="mx-auto w-full max-w-2xl">
+          <title>Quadro restrito · Ronin</title>
+          <EmptyState
+            icon={Lock}
+            headingLevel="h1"
+            title={RESTRICTION_MESSAGES.noAccessTitle}
+            description={RESTRICTION_MESSAGES.lockedClick}
+            action={<Link to="/">{RESTRICTION_MESSAGES.backToBoards}</Link>}
+          />
+        </div>
+      );
+    }
     if (isApiError(board.error) && (board.error.status === 404 || board.error.status === 400)) {
       return (
         <div className="mx-auto w-full max-w-2xl">
@@ -359,6 +401,14 @@ function BoardView() {
           Quadros
         </Link>
 
+        {payload.board.cover && (
+          <BoardCoverBanner
+            url={payload.board.cover.url}
+            width={payload.board.cover.width}
+            height={payload.board.cover.height}
+          />
+        )}
+
         <BoardHeader
           board={payload.board}
           readOnly={readOnly}
@@ -375,6 +425,8 @@ function BoardView() {
           }
           onOpenLabels={() => setLabelsOpen(true)}
           onOpenArchived={() => setArchivedOpen(true)}
+          onOpenCover={() => setCoverOpen(true)}
+          onOpenVisibility={() => setVisibilityOpen(true)}
           onArchive={() => setConfirmArchive(true)}
           onRestore={restore}
           onDelete={() => setDeleting(payload.board)}
@@ -459,6 +511,26 @@ function BoardView() {
           open={archivedOpen}
           readOnly={readOnly}
           onClose={() => setArchivedOpen(false)}
+        />
+
+        <BoardCoverDialog
+          board={payload.board}
+          open={coverOpen}
+          readOnly={readOnly}
+          announce={announce}
+          onClose={() => setCoverOpen(false)}
+        />
+
+        <BoardVisibilityDialog
+          board={payload.board}
+          open={visibilityOpen}
+          readOnly={readOnly}
+          announce={announce}
+          onClose={() => setVisibilityOpen(false)}
+          onLostAccess={() => {
+            setVisibilityOpen(false);
+            void navigate('/', { replace: true });
+          }}
         />
       </div>
     </CardFaceDataProvider>

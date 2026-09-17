@@ -13,9 +13,11 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Playwright](https://img.shields.io/badge/E2E-Playwright-2EAD33?logo=playwright&logoColor=white)
 
-> **English summary.** Web client for Ronin, a self-hosted, board-based task manager for small teams, in the spirit of Trello and ClickUp. Built with React 19, TypeScript, Vite, TanStack Query and Tailwind CSS 4. Highlights: drag-and-drop with a keyboard-friendly "Move to…" alternative, optimistic updates with per-item rollback and mutation queues, filters stored in the URL, safe Markdown, light and dark themes, page transitions with the View Transitions API, and WCAG 2.2 AA checks with axe in the end-to-end suite. Documentation is in Brazilian Portuguese.
+> **English summary.** Web client for Ronin, a self-hosted, board-based task manager for small teams, in the spirit of Trello and ClickUp. Built with React 19, TypeScript, Vite, TanStack Query and Tailwind CSS 4. Highlights: drag-and-drop with a keyboard-friendly "Move to…" alternative, optimistic updates with per-item rollback and mutation queues, board covers uploaded straight from the browser to object storage with a progress bar and client-side resizing, restricted boards that show up as a padlocked tile for people without access, filters stored in the URL, safe Markdown, light and dark themes, page transitions with the View Transitions API, and WCAG 2.2 AA checks with axe in the end-to-end suite. Documentation is in Brazilian Portuguese.
 
-O Ronin é um app de tarefas em quadros, no estilo Trello e ClickUp, para uma equipe pequena rodar no próprio servidor. Este repositório tem a **SPA em React**. A API, o banco e os contratos compartilhados ficam em um repositório separado.
+O Ronin é um app de tarefas em quadros, no estilo Trello e ClickUp, para uma equipe pequena rodar no próprio servidor. Este repositório tem a **SPA em React**. A API, o banco e o pacote de contratos compartilhados ficam em um repositório separado, clonado ao lado desta pasta.
+
+Instância publicada: <https://ronin-web.onrender.com> (plano gratuito do Render; a primeira visita pode demorar enquanto o serviço acorda).
 
 ## Sumário
 
@@ -23,6 +25,8 @@ O Ronin é um app de tarefas em quadros, no estilo Trello e ClickUp, para uma eq
 - [Funcionalidades](#funcionalidades)
 - [Destaques técnicos](#destaques-técnicos)
 - [Stack](#stack)
+- [Como rodar](#como-rodar)
+- [Testes](#testes)
 - [Documentação](#documentação)
 - [Deploy](#deploy)
 - [Autor](#autor)
@@ -31,13 +35,17 @@ O Ronin é um app de tarefas em quadros, no estilo Trello e ClickUp, para uma eq
 
 Capturas geradas com o próprio app, rodando com dados de exemplo.
 
-**Quadro no tema escuro**
+**Quadro no tema escuro, com a capa do quadro no topo**
 
-![Quadro "Sprint 12" no tema escuro, com as listas A fazer, Fazendo, Em revisão e Concluído](docs/images/quadro-dark.png)
+![Quadro "Ronin · Sprint 12" no tema escuro, com a faixa da capa acima das listas A fazer, Fazendo, Em revisão e Concluído](docs/images/quadro-dark.png)
 
 **Quadro no tema claro**
 
 ![O mesmo quadro no tema claro](docs/images/quadro-light.png)
+
+**Lista de quadros: capa nos tiles e cadeado no quadro restrito**
+
+![Lista de quadros vista por alguém sem acesso ao quadro "Contratações 2026", que aparece com cadeado e o texto "Quadro restrito"; os outros dois quadros mostram a capa](docs/images/quadros-capa-e-cadeado.png)
 
 <table>
   <tr>
@@ -46,13 +54,15 @@ Capturas geradas com o próprio app, rodando com dados de exemplo.
   </tr>
   <tr>
     <td width="50%"><strong>Login</strong><br /><img src="docs/images/login.png" alt="Tela de login no tema escuro" /></td>
-    <td width="50%" align="center"><strong>Celular</strong><br /><img src="docs/images/mobile-quadro.png" alt="Quadro no celular, com navegação inferior" width="260" /></td>
+    <td width="50%" align="center"><strong>Celular</strong><br /><img src="docs/images/mobile-quadro.png" alt="Quadro no celular, com a capa no topo e navegação inferior" width="260" /></td>
   </tr>
 </table>
 
 ## Funcionalidades
 
 - **Quadros e listas com cor** de uma paleta fixa, e uma lista marcada como "Concluído".
+- **Capa do quadro**: uma imagem escolhida do computador, reduzida no navegador e enviada direto para o armazenamento, com barra de progresso. Aparece no tile da lista de quadros e no topo do quadro; dá para trocar e remover.
+- **Quadros restritos**: "Quem pode ver este quadro" alterna entre visível para a equipe e restrito a uma lista de pessoas. Quem não está na lista vê o quadro com um **cadeado** e o texto "Quadro restrito", e não consegue abrir; quem administra a equipe vê tudo.
 - **Arrastar e soltar** listas, cards e itens de checklist com `@dnd-kit`.
 - **"Mover para…"** (quadro, lista e posição) como alternativa completa ao arraste, pelo teclado e no celular.
 - **Detalhe do card** em diálogo com URL própria: título, descrição em **Markdown seguro**, histórico de atividade.
@@ -71,11 +81,14 @@ Capturas geradas com o próprio app, rodando com dados de exemplo.
 
 - **Atualizações otimistas com rollback por item** (TanStack Query 5): mover, concluir ou editar um card aparece na hora. Se a API recusar, só os campos daquele card voltam, sem desfazer as outras ações em andamento ([`src/features/cards/cards-api.ts`](src/features/cards/cards-api.ts)).
 - **Filas de mutação** por escopo (`scope` do TanStack Query): movimentos seguidos no mesmo quadro são enviados em ordem, e o quadro só é recarregado quando a fila esvazia.
+- **Envio da capa fora do cliente de API**: o `PUT` vai para outra origem, com a URL assinada pela API, sem cookie de sessão e sem header de CSRF, por `XMLHttpRequest` só por causa do progresso ([`src/lib/cover-upload.ts`](src/lib/cover-upload.ts)). Antes de subir, a imagem é redimensionada no navegador para no máximo 1600 px no maior lado ([`src/lib/image-resize.ts`](src/lib/image-resize.ts)); tipo e tamanho são conferidos duas vezes no cliente e de novo no servidor.
+- **Quadro bloqueado é um tipo, não um estado vazio**: a listagem vem do servidor como união discriminada (`locked`), e o tile bloqueado não é link — é um botão focável que explica o motivo, com o cadeado sempre acompanhado de texto ([`src/features/boards/BoardsPage.tsx`](src/features/boards/BoardsPage.tsx), [`src/features/boards/board-messages.ts`](src/features/boards/board-messages.ts)).
+- **Perder o acesso com o quadro aberto é um caso tratado**: `403 BOARD_RESTRICTED` numa mutação avisa "Você não tem mais acesso a este quadro." e recarrega o quadro, que cai na tela de sem acesso; quem se remove da própria lista volta para Quadros ([`src/features/boards/board-errors.ts`](src/features/boards/board-errors.ts)).
 - **Contratos compartilhados**: tipos e schemas Zod vêm do pacote `@raphasparda/ronin-shared`, o mesmo que a API usa. Os testes de componentes usam MSW com as mesmas fixtures.
 - **Design system tokenizado no Tailwind 4**: tokens semânticos (`--color-surface`, `--color-text`, ...) e de paleta por tema em `@theme`, sem cores literais nos componentes ([`src/styles/globals.css`](src/styles/globals.css), [`docs/design/design-system.md`](docs/design/design-system.md)).
 - **Segurança no cliente**: o redirecionamento pós-login (`?next=`) aceita só caminhos internos ([`src/lib/safe-next.ts`](src/lib/safe-next.ts)); o Markdown é renderizado sem HTML cru e sem links `javascript:` ([`src/components/ui/Markdown.tsx`](src/components/ui/Markdown.tsx)); toda mutação envia o header de CSRF que a API exige.
 - **Transições de página** calculadas pela profundidade da rota (push, pop, fade), sobre `viewTransition` do React Router ([`src/lib/page-transitions.ts`](src/lib/page-transitions.ts)).
-- **E2E contra a API real**: o Playwright sobe a API do ronin-api num banco isolado (`kanban_e2e`), em portas próprias, e roda em desktop e celular, com checagem de acessibilidade por axe.
+- **E2E contra a API real**: o Playwright sobe a API num banco isolado (`kanban_e2e`), em portas próprias, e roda em desktop e celular, com checagem de acessibilidade por axe.
 
 ## Stack
 
@@ -91,6 +104,60 @@ Capturas geradas com o próprio app, rodando com dados de exemplo.
 | Testes      | Vitest + Testing Library + MSW; Playwright + axe                |
 | Qualidade   | ESLint, Prettier, GitHub Actions                                |
 
+## Como rodar
+
+**Pré-requisitos:** Node.js 24 e pnpm 10 (`npm i -g pnpm@10`). A SPA não funciona sozinha: ela precisa da **API do Ronin**, que fica em um repositório separado (privado). Clone os dois lado a lado, com a API na pasta `ronin-api`:
+
+```text
+Projetos/
+├─ ronin-api/   pnpm install  →  pnpm dev   (PostgreSQL 5433, migrations, API 3000)
+└─ ronin-web/   pnpm install  →  pnpm dev   (Vite 5310, proxy /api → 3000)
+```
+
+1. Instale e suba a API primeiro, seguindo o README dela. Ela sobe o próprio PostgreSQL, sem Docker.
+2. No segundo terminal, nesta pasta:
+
+   ```powershell
+   pnpm install
+   pnpm dev
+   ```
+
+3. Abra <http://127.0.0.1:5310>. Com o banco vazio, a primeira tela é **Configurar a equipe**: a primeira conta vira Admin.
+
+Instale o ronin-api **antes**: o `@raphasparda/ronin-shared` é resolvido por `link:../ronin-api/packages/shared`, direto na fonte TypeScript. Para apontar para outra pasta, use `RONIN_API_DIR` no `.env`. Detalhes de portas, proxy e problemas comuns: [`docs/ops/setup-local.md`](docs/ops/setup-local.md).
+
+| Comando                             | O que faz                                              |
+| ----------------------------------- | ------------------------------------------------------ |
+| `pnpm dev`                          | Vite em <http://127.0.0.1:5310>, com proxy de `/api`   |
+| `pnpm build` / `pnpm preview`       | build de produção em `dist/` e pré-visualização        |
+| `pnpm test` / `pnpm test:watch`     | testes de componentes (Vitest + Testing Library + MSW) |
+| `pnpm test:e2e`                     | E2E: prepara o banco `kanban_e2e` e roda o Playwright  |
+| `pnpm lint` / `pnpm lint:fix`       | ESLint                                                 |
+| `pnpm typecheck`                    | TypeScript da SPA e dos E2E                            |
+| `pnpm format` / `pnpm format:check` | Prettier                                               |
+
+## Testes
+
+```powershell
+pnpm test       # componentes e lógica de tela, sem rede
+pnpm test:e2e   # fluxos completos contra a API real, em banco isolado
+```
+
+Execução local de **17/09/2026**:
+
+| Suíte                                     | Arquivos | Casos | Resultado                                 |
+| ----------------------------------------- | -------- | ----- | ----------------------------------------- |
+| Componentes (Vitest + Testing Library)    | 33       | 304   | 304 passando                              |
+| E2E (Playwright + axe, desktop e celular) | 12       | 56    | 52 passando, 3 pulados, 1 falha conhecida |
+
+- Os testes de componentes rodam em jsdom com MSW, usando as mesmas fixtures do pacote de contratos; nada sai para a rede.
+- O `pnpm test:e2e` sobe a API do repositório irmão numa porta própria (3100) e o Vite em outra (5320), contra o banco `kanban_e2e`: o banco de desenvolvimento nunca é tocado. Inclui a varredura de acessibilidade com axe (WCAG 2.x A/AA) nas telas principais, nos dois temas.
+- Os 3 casos pulados são específicos de um viewport (`integration-bugs.spec.ts` roda partes só no celular, partes só no desktop).
+- A falha conhecida é no celular: em `card-fields-filter.spec.ts`, o rodapé da página fica sobre o menu de ações do card e intercepta o clique. É um problema real da interface no viewport pequeno, ainda em aberto.
+- Nesta máquina Windows, processos `node.exe` caem de forma intermitente (`0xC0000409`) e derrubam a execução sem erro de JavaScript; os casos afetados passam ao rodar de novo. Diagnóstico e contorno em [`docs/ops/known-issues.md`](docs/ops/known-issues.md).
+
+CI no GitHub Actions: lint, typecheck, testes de componentes, build e E2E com o Chromium ([`docs/ops/ci.md`](docs/ops/ci.md)).
+
 ## Documentação
 
 | Documento                                                      | Conteúdo                                         |
@@ -103,9 +170,11 @@ Capturas geradas com o próprio app, rodando com dados de exemplo.
 | [`docs/ops/known-issues.md`](docs/ops/known-issues.md)         | problemas conhecidos                             |
 | [`CHANGELOG.md`](CHANGELOG.md)                                 | histórico de entregas                            |
 
+O escopo do produto, o contrato da API e as decisões de arquitetura (ADRs) ficam no repositório da API.
+
 ## Deploy
 
-O front é publicado como **Static Site no Render**: build com `sh scripts/render-build.sh` (clona o repositório da API para obter os contratos), publicação do `dist/`, rewrite de `/api/*` para a API e headers de segurança com CSP estrita. Push na `main` publica sozinho. Passo a passo, variáveis e headers em [`docs/ops/deploy-render.md`](docs/ops/deploy-render.md).
+O front é publicado como **Static Site no Render**: build com `sh scripts/render-build.sh` (clona o repositório da API para obter os contratos), publicação do `dist/`, rewrite de `/api/*` para a API e headers de segurança com CSP estrita — que inclui o host do armazenamento das capas em `img-src`. Push na `main` publica sozinho. Passo a passo, variáveis e headers em [`docs/ops/deploy-render.md`](docs/ops/deploy-render.md).
 
 ## Autor
 

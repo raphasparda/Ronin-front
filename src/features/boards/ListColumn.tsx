@@ -1,4 +1,4 @@
-import type { BoardCard, List } from '@raphasparda/ronin-shared';
+import type { CardSummary, List } from '@raphasparda/ronin-shared';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -19,7 +19,7 @@ import { InlineEdit } from '../../components/ui/InlineEdit';
 import { Menu, MenuItem, MenuSeparator } from '../../components/ui/Menu';
 import { AddCardForm } from '../cards/AddCardForm';
 import { listBodyDroppableId } from '../cards/card-drag';
-import { CardFace, LockedCardFace, type CardFaceActions } from '../cards/CardFace';
+import { CardFace, type CardFaceActions } from '../cards/CardFace';
 
 export const DONE_LIST_HELP = 'Cards movidos para cá são concluídos.';
 
@@ -43,7 +43,7 @@ interface ListColumnProps {
   filtered: boolean;
   /** Ids dos cards exibidos, na ordem (durante o arraste, a ordem provisória). */
   cardIds: readonly string[];
-  cardsById: ReadonlyMap<string, BoardCard>;
+  cardsById: ReadonlyMap<string, CardSummary>;
   pendingCardIds: ReadonlySet<string>;
   /** A coluna recebe o card sendo arrastado: contorno na cor da lista. */
   dropTarget: boolean;
@@ -206,17 +206,13 @@ export const ListColumn = memo(function ListColumn({
             <ol aria-label={`Cards de ${list.name}`} className="flex flex-col gap-2">
               {cards.map((card) => (
                 <li key={card.id}>
-                  {card.locked ? (
-                    <LockedCardFace card={card} color={list.color} />
-                  ) : (
-                    <CardFace
-                      card={card}
-                      color={list.color}
-                      readOnly={readOnly}
-                      pending={pendingCardIds.has(card.id)}
-                      actions={cardActions}
-                    />
-                  )}
+                  <CardFace
+                    card={card}
+                    color={list.color}
+                    readOnly={readOnly}
+                    pending={pendingCardIds.has(card.id)}
+                    actions={cardActions}
+                  />
                 </li>
               ))}
             </ol>

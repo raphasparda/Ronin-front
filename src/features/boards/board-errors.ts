@@ -9,7 +9,7 @@ export const BOARD_ERROR_MESSAGES = {
   boardArchived: 'Este quadro foi arquivado. Restaure o quadro para editar.',
   listArchived: 'Esta lista foi arquivada. O quadro foi atualizado.',
   notFound: 'Não encontramos este item. Ele pode ter sido excluído. O quadro foi atualizado.',
-  cardRestricted: 'Você não tem mais acesso a este card. O quadro foi atualizado.',
+  restricted: 'Você não tem mais acesso a este quadro.',
 } as const;
 
 /**
@@ -49,8 +49,9 @@ export function handleBoardError(
       toast.error(BOARD_ERROR_MESSAGES.notFound);
       refresh();
       return;
-    case 'CARD_RESTRICTED':
-      toast.error(BOARD_ERROR_MESSAGES.cardRestricted);
+    // Perdeu o acesso com o quadro aberto: o refetch cai no estado "sem acesso" (ADR 0015).
+    case 'BOARD_RESTRICTED':
+      toast.error(BOARD_ERROR_MESSAGES.restricted);
       refresh();
       return;
     case 'FORBIDDEN':

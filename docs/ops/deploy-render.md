@@ -90,8 +90,8 @@ Em _Headers_. Path `/*` vale para todo o site; `/assets/*` sobrescreve o `Cache-
 - **`style-src 'self'`**: o CSS sai em `/assets/*.css`. Os estilos dinâmicos do React e do `@dnd-kit` são aplicados por `element.style`, que a CSP não bloqueia.
 - **`font-src 'self'`**: a Figtree vem do `@fontsource-variable` e é empacotada em `/assets/*.woff2`.
 - **`img-src 'self' data: blob: https://e521da8e881f7245cf9da1197a70e606.r2.cloudflarestorage.com`**: imagens de `public/` e eventuais `data:` que o Vite embute; `blob:` é a pré-visualização local da capa enquanto o envio acontece; o host do R2 serve a capa por URL assinada (Fatia 11, ADR 0016).
-- **`connect-src 'self' https://e521da8e881f7245cf9da1197a70e606.r2.cloudflarestorage.com`**: a API chega pelo rewrite `/api/*`; o host do R2 recebe o `PUT` do upload direto da capa.
-- **Host do R2**: `e521da8e881f7245cf9da1197a70e606.r2.cloudflarestorage.com` (endpoint S3 da conta; o bucket vai no caminho da URL assinada). Se um dia o bucket ganhar domínio próprio, troque o host aqui e nos headers do serviço. Sem esse host na CSP o navegador bloqueia o `PUT` do upload e a imagem da capa. Enquanto a instância não tem R2 configurado, `features.cardCovers` vem `false`, a UI não mostra "Adicionar capa" e a CSP pode ficar sem o host (os dois trechos `https://e521da8e881f7245cf9da1197a70e606.r2.cloudflarestorage.com` saem da linha).
+- **`connect-src 'self' https://e521da8e881f7245cf9da1197a70e606.r2.cloudflarestorage.com`**: a API chega pelo rewrite `/api/*`; o host do R2 recebe o `PUT` do upload direto da capa do quadro.
+- **Host do R2**: `e521da8e881f7245cf9da1197a70e606.r2.cloudflarestorage.com` (endpoint S3 da conta; o bucket vai no caminho da URL assinada). Se um dia o bucket ganhar domínio próprio, troque o host aqui e nos headers do serviço. Sem esse host na CSP o navegador bloqueia o `PUT` do upload e a imagem da capa. Enquanto a instância não tem R2 configurado, `features.boardCovers` vem `false`, a UI não mostra "Adicionar capa" e a CSP pode ficar sem o host (os dois trechos `https://e521da8e881f7245cf9da1197a70e606.r2.cloudflarestorage.com` saem da linha).
 - **`frame-ancestors 'none'`** e `X-Frame-Options: DENY`: ninguém embute o app em iframe.
 
 ### Cache
@@ -123,7 +123,7 @@ Build de produção servido por um servidor estático local com exatamente os he
 
 Antes do ajuste do Zod, todas as telas registravam `script-src eval` no chunk dos schemas.
 
-Capa do card (Fatia 11): a validação com o host do R2 só pode ser refeita quando o bucket existir (tarefa 11.9). Telas a repetir com o host preenchido: quadro com card com capa, detalhe do card com capa, envio de capa (o `PUT` direto no R2) — nenhuma violação de `img-src` nem de `connect-src`.
+Capa do quadro (Fatia 11): a validação com o host do R2 só pode ser refeita quando o bucket existir (tarefa 11.9). Telas a repetir com o host preenchido: lista de quadros com capa, quadro com a capa no topo, envio de capa (o `PUT` direto no R2) — nenhuma violação de `img-src` nem de `connect-src`.
 
 Para repetir depois de mudar dependências ou o `index.html`: `pnpm build`, sirva o `dist/` com os headers da tabela e o fallback para `index.html`, abra as telas no Chromium e procure `Refused to` / `Content Security Policy` no console.
 

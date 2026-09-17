@@ -1,5 +1,5 @@
 import type { Board } from '@raphasparda/ronin-shared';
-import { Archive, ArrowLeft, RotateCcw, Trash2 } from 'lucide-react';
+import { Archive, ArrowLeft, Lock, RotateCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -10,6 +10,7 @@ import { ListSkeleton, LoadError } from '../../components/ui/QueryState';
 import { toast } from '../../components/ui/toast-store';
 import { isGloballyHandled, serverMessage } from '../../lib/api-errors';
 import { useSessionUser } from '../auth/auth-api';
+import { RESTRICTION_MESSAGES } from './board-messages';
 import { useBoards, useRestoreBoard } from './boards-api';
 import { DeleteBoardDialog } from './DeleteBoardDialog';
 
@@ -54,42 +55,58 @@ export function ArchivedBoardsPage() {
           aria-label="Quadros arquivados"
           className="divide-y divide-border rounded-lg border border-border bg-surface shadow-sm"
         >
-          {boards.data.map((board) => (
-            <li key={board.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                <Link to={`/b/${board.id}`} className="truncate font-semibold">
-                  {board.name}
-                </Link>
-                <Pill status="archived" icon={<Archive size={12} />}>
-                  Arquivado
-                </Pill>
-              </span>
-              <span className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  icon={<RotateCcw size={14} />}
-                  aria-label={`Restaurar ${board.name}`}
-                  loading={restore.isPending && restore.variables === board.id}
-                  loadingText="Restaurando…"
-                  onClick={() => restoreBoard(board)}
-                >
-                  Restaurar
-                </Button>
-                {isAdmin && (
+          {boards.data.map((board) =>
+            board.locked ? (
+              // Quadro restrito sem acesso: nome e cadeado, sem link e sem ações (ADR 0015).
+              <li key={board.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-1.5 font-semibold">
+                    <Lock aria-hidden size={14} className="shrink-0 text-muted" />
+                    <span className="truncate">{board.name}</span>
+                  </span>
+                  <Pill status="archived" icon={<Archive size={12} />}>
+                    Arquivado
+                  </Pill>
+                  <Pill>{RESTRICTION_MESSAGES.lockedBadge}</Pill>
+                </span>
+              </li>
+            ) : (
+              <li key={board.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <Link to={`/b/${board.id}`} className="truncate font-semibold">
+                    {board.name}
+                  </Link>
+                  <Pill status="archived" icon={<Archive size={12} />}>
+                    Arquivado
+                  </Pill>
+                </span>
+                <span className="flex gap-2">
                   <Button
                     size="sm"
-                    variant="danger"
-                    icon={<Trash2 size={14} />}
-                    aria-label={`Excluir ${board.name}`}
-                    onClick={() => setDeleting(board)}
+                    variant="secondary"
+                    icon={<RotateCcw size={14} />}
+                    aria-label={`Restaurar ${board.name}`}
+                    loading={restore.isPending && restore.variables === board.id}
+                    loadingText="Restaurando…"
+                    onClick={() => restoreBoard(board)}
                   >
-                    Excluir
+                    Restaurar
                   </Button>
-                )}
-              </span>
-            </li>
-          ))}
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={<Trash2 size={14} />}
+                      aria-label={`Excluir ${board.name}`}
+                      onClick={() => setDeleting(board)}
+                    >
+                      Excluir
+                    </Button>
+                  )}
+                </span>
+              </li>
+            ),
+          )}
         </ul>
       )}
 

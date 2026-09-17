@@ -3,38 +3,13 @@ import {
   boardFilterToParams,
   EMPTY_BOARD_FILTER,
   isBoardFilterActive,
-  matchesBoardFilter,
-  normalizeSearchText,
   parseBoardFilter,
-  type BoardCard,
   type BoardFilter,
 } from '@raphasparda/ronin-shared';
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 
 const FILTER_PARAM_NAMES = new Set<string>(Object.values(BOARD_FILTER_PARAMS));
-
-/** Algum critério além do texto do título está preenchido. */
-function hasCriteriaBeyondText(filter: BoardFilter): boolean {
-  return (
-    filter.assigneeIds.length > 0 ||
-    filter.labelIds.length > 0 ||
-    filter.priorities.length > 0 ||
-    filter.due.length > 0
-  );
-}
-
-/**
- * Filtro sobre um card do quadro (RN41): o card bloqueado só casa com o **texto do título** —
- * quem filtra não pode saber responsável, etiqueta, prioridade nem prazo dele, então qualquer
- * outro critério ativo o esconde. Ele continua contando no total de cards do quadro.
- */
-export function matchesBoardCard(card: BoardCard, filter: BoardFilter, now: Date): boolean {
-  if (!card.locked) return matchesBoardFilter(card, filter, now);
-  if (hasCriteriaBeyondText(filter)) return false;
-  const query = normalizeSearchText(filter.text);
-  return query === '' || normalizeSearchText(card.title).includes(query);
-}
 
 /** Número de critérios preenchidos (o "(N)" do botão Filtros). */
 export function countActiveCriteria(filter: BoardFilter): number {

@@ -25,7 +25,6 @@ import { Pill } from '../../components/ui/Pill';
 import { Popover } from '../../components/ui/Popover';
 import { PriorityBadge } from '../../components/ui/PriorityBadge';
 import { useSessionUser } from '../auth/auth-api';
-import { unlockedCards } from '../cards/cards-api';
 import { displayName, useUsers } from '../users/users-api';
 
 export const SEARCH_DEBOUNCE_MS = 200;
@@ -128,7 +127,7 @@ export function useFilterOptions(payload: BoardPayload) {
   const users = useUsers();
   const me = useSessionUser();
 
-  const assignedIds = new Set(unlockedCards(payload.cards).flatMap((card) => card.assigneeIds));
+  const assignedIds = new Set(payload.cards.flatMap((card) => card.assigneeIds));
   const people = (users.data ?? [])
     .filter((user) => user.id !== me?.id && (user.status === 'active' || assignedIds.has(user.id)))
     .map((user) => ({

@@ -7,7 +7,6 @@ import {
   type CardPriority,
   type Label,
 } from '@raphasparda/ronin-shared';
-import { useQueryClient } from '@tanstack/react-query';
 import { CalendarPlus, Pencil, Plus, Tag, UserPlus, X } from 'lucide-react';
 import { useId, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 
@@ -26,9 +25,9 @@ import { useSession, useSessionUser } from '../auth/auth-api';
 import { useBoardErrorHandler } from '../boards/board-errors';
 import { LabelsDialog } from '../boards/LabelsDialog';
 import { displayName, useUsers } from '../users/users-api';
-import { CARD_MESSAGES, RESTRICTION_MESSAGES } from './card-messages';
+import { CARD_MESSAGES } from './card-messages';
 import { useCardAssignees, useCardLabels } from './card-relations-api';
-import { cardQueryKey, useUpdateCard } from './cards-api';
+import { useUpdateCard } from './cards-api';
 
 const REMOVE_BUTTON =
   'inline-flex size-10 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-text md:size-7';
@@ -115,7 +114,6 @@ export function CardAssigneesField({ card, readOnly, announce }: FieldProps) {
   const labelId = useId();
   const users = useUsers();
   const me = useSessionUser();
-  const queryClient = useQueryClient();
   const assignees = useCardAssignees(card.boardId, card.id);
   const handleError = useBoardErrorHandler(card.boardId);
   const [query, setQuery] = useState('');
@@ -129,12 +127,6 @@ export function CardAssigneesField({ card, readOnly, announce }: FieldProps) {
     assignees.mutate(
       { id: userId, add },
       {
-        onSuccess: () => {
-          // RN31: atribuir em card restrito dá acesso na mesma ação; o detalhe recarrega a lista.
-          if (!add || card.visibility !== 'restricted') return;
-          toast.success(RESTRICTION_MESSAGES.assigneeGainedAccess(nameOf(userId)));
-          void queryClient.invalidateQueries({ queryKey: cardQueryKey(card.id) });
-        },
         onError: (error) => {
           if (isApiError(error) && error.code === 'USER_NOT_ACTIVE') {
             toast.error(CARD_MESSAGES.assigneeInactive);

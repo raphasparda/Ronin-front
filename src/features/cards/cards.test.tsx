@@ -144,6 +144,37 @@ describe('Face do card', () => {
       within(dialog).getByRole('heading', { level: 2, name: 'Publicar campanha' }),
     ).toHaveFocus();
   });
+
+  /**
+   * A Fatia 11 passou visibilidade e capa para o quadro: no card não sobra cadeado, campo de
+   * capa nem painel de acesso, e toda face volta a ser link arrastável com menu de ações.
+   */
+  it('não tem cadeado, capa nem painel de acesso: todo card abre normalmente', async () => {
+    const user = userEvent.setup();
+    renderApp(`/b/${BOARD_ID}`);
+
+    const list = await screen.findByRole('list', { name: 'Cards de Fazendo' });
+    // Toda face é link (nenhuma é o botão de card bloqueado) e nenhuma anuncia restrição.
+    const faces = within(list).getAllByRole('link');
+    expect(faces).toHaveLength(3);
+    for (const face of faces) {
+      expect(face.getAttribute('aria-label')).not.toContain('restrito');
+    }
+    expect(within(list).queryByText('Card restrito')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Ações do card Publicar campanha' }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Publicar campanha. Tem descrição' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Publicar campanha' });
+
+    expect(within(dialog).queryByRole('heading', { name: 'Capa' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Adicionar capa')).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('heading', { name: 'Quem pode ver este card' }),
+    ).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('img', { name: 'Capa do card' })).not.toBeInTheDocument();
+  });
 });
 
 describe('Mover para…', () => {

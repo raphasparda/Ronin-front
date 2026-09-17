@@ -107,23 +107,6 @@ const cases: Array<[ActivityEntry, string, string?]> = [
   [{ type: 'card_reopened', data: {} }, 'Ana Souza reabriu o card'],
   [{ type: 'card_archived', data: {} }, 'Ana Souza arquivou o card'],
   [{ type: 'card_restored', data: {} }, 'Ana Souza restaurou o card'],
-  [
-    { type: 'card_visibility_changed', data: { from: 'team', to: 'restricted' } },
-    'Ana Souza restringiu o card a pessoas específicas',
-  ],
-  [
-    { type: 'card_visibility_changed', data: { from: 'restricted', to: 'team' } },
-    'Ana Souza deixou o card visível para a equipe',
-  ],
-  [{ type: 'card_viewer_added', data: { userId: BRUNO } }, 'Ana Souza deu acesso a Bruno Lima'],
-  [{ type: 'card_viewer_added', data: { userId: ANA } }, 'Ana Souza entrou na lista de acesso'],
-  [
-    { type: 'card_viewer_removed', data: { userId: BRUNO } },
-    'Ana Souza tirou o acesso de Bruno Lima',
-  ],
-  [{ type: 'card_viewer_removed', data: { userId: ANA } }, 'Ana Souza saiu da lista de acesso'],
-  [{ type: 'card_cover_changed', data: {} }, 'Ana Souza alterou a capa do card'],
-  [{ type: 'card_cover_removed', data: {} }, 'Ana Souza removeu a capa do card'],
 ];
 
 describe('Histórico do card: frases pt-BR', () => {
@@ -131,7 +114,7 @@ describe('Histórico do card: frases pt-BR', () => {
     expect(phrase(entry)).toBe(expected);
   });
 
-  it('cobre os 16 tipos de atividade', () => {
+  it('cobre os 11 tipos de atividade', () => {
     expect(new Set(cases.map(([entry]) => entry.type))).toEqual(new Set(ACTIVITY_TYPES));
   });
 

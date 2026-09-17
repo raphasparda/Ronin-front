@@ -8,7 +8,7 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 
 import { api } from '../../lib/api-client';
 import { boardQueryKey } from '../boards/boards-api';
-import { cardActivityQueryKey, cardQueryKey, findUnlockedCard, patchCard } from './cards-api';
+import { cardActivityQueryKey, cardQueryKey, patchCard } from './cards-api';
 
 type RelationField = 'assigneeIds' | 'labelIds';
 
@@ -28,7 +28,7 @@ function currentIds(
   const detail = queryClient.getQueryData<CardDetail>(cardQueryKey(cardId));
   if (detail) return detail[field];
   const payload = queryClient.getQueryData<BoardPayload>(boardQueryKey(boardId));
-  return findUnlockedCard(payload?.cards, cardId)?.[field] ?? [];
+  return payload?.cards.find((card) => card.id === cardId)?.[field] ?? [];
 }
 
 /**

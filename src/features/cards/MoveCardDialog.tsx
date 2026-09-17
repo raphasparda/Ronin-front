@@ -11,7 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import { Pill } from '../../components/ui/Pill';
 import { Select } from '../../components/ui/Select';
-import { useBoard, useBoards } from '../boards/boards-api';
+import { openBoards, useBoard, useBoards } from '../boards/boards-api';
 import { placementAtPosition } from './card-drag';
 import { cardsInList, usePendingCardIds, type MoveCardVariables } from './cards-api';
 
@@ -53,7 +53,9 @@ function MoveCardForm({ card, source, onMove, onClose }: MoveCardFormProps) {
   const target = crossBoard ? targetQuery.data : source;
   const pendingIds = usePendingCardIds(boardId);
 
-  const boardOptions = (boards.data ?? [source.board])
+  // Quadro restrito sem acesso não é destino possível: ele nem aparece na lista.
+  const destinations = boards.data ? openBoards(boards.data) : [source.board];
+  const boardOptions = destinations
     .filter((board) => board.archivedAt === null)
     .map((board) => ({ value: board.id, label: board.name }));
   if (!boardOptions.some((option) => option.value === source.board.id)) {

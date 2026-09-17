@@ -16,7 +16,6 @@ import { Dialog } from '../../components/ui/Dialog';
 import { Input } from '../../components/ui/Input';
 import { LabelPill } from '../../components/ui/LabelPill';
 import { toast } from '../../components/ui/toast-store';
-import { unlockedCards } from '../cards/cards-api';
 import { useBoardErrorHandler } from './board-errors';
 import { isDuplicateLabelName, useCreateLabel, useDeleteLabel, useUpdateLabel } from './labels-api';
 
@@ -146,9 +145,8 @@ export function LabelsDialog({ open, payload, readOnly, card, onClose }: LabelsD
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Label | null>(null);
 
-  // Cards bloqueados não trazem etiquetas: a contagem é a dos cards que a pessoa enxerga.
   const usage = (labelId: string) =>
-    unlockedCards(payload.cards).filter((item) => item.labelIds.includes(labelId)).length;
+    payload.cards.filter((item) => item.labelIds.includes(labelId)).length;
   const search = normalizeSearchText(query);
   const visible = search
     ? labels.filter((label) => normalizeSearchText(label.name).includes(search))

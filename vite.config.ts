@@ -104,6 +104,11 @@ export default defineConfig(() => {
       include: ['src/**/*.test.{ts,tsx}'],
       setupFiles: ['./src/test/setup.ts'],
       restoreMocks: true,
+      // Windows com muitos núcleos abria um worker por arquivo e o tempo de arranque
+      // (~2 s cada) estourava o limite padrão de 5 s em testes aleatórios.
+      maxWorkers: '50%',
+      testTimeout: 15000,
+      hookTimeout: 15000,
     },
   };
 });

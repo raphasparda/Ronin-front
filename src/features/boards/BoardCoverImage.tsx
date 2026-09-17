@@ -2,12 +2,9 @@ import { ImageOff } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '../../components/ui/Button';
-import { COVER_MESSAGES } from './card-messages';
+import { COVER_MESSAGES } from './board-messages';
 
-/** Proporção fixa da capa: o espaço é reservado antes de a imagem carregar (scope §11.8). */
-const ASPECT = 'aspect-[16/9]';
-
-export interface CardCoverImageProps {
+export interface BoardCoverImageProps {
   /** URL assinada de curta duração (nunca é gravada nem copiável pela UI). */
   url: string;
   width: number | null;
@@ -34,17 +31,16 @@ function useLoadState(url: string) {
 }
 
 /**
- * Capa na face do card: decorativa (`alt=""`, o título já identifica o card), recorte pelo
- * centro, `loading="lazy"` e altura reservada para o quadro não pular. Se a imagem falhar, o
- * espaço some e o resto da face continua igual.
+ * Capa no tile da lista de quadros: decorativa (`alt=""`, o nome já identifica o quadro),
+ * recorte pelo centro e altura reservada para a grade não pular. Falhou, o espaço some.
  */
-export function CardCoverThumb({ url, width, height }: CardCoverImageProps) {
+export function BoardCoverThumb({ url, width, height }: BoardCoverImageProps) {
   const { failed, fail } = useLoadState(url);
 
   if (failed) return null;
 
   return (
-    <span className={`-mx-1 -mt-1 block overflow-hidden rounded-md bg-surface-sunken ${ASPECT}`}>
+    <span className="block aspect-[16/6] overflow-hidden rounded-t-xl bg-surface-sunken">
       <img
         src={url}
         alt=""
@@ -59,17 +55,20 @@ export function CardCoverThumb({ url, width, height }: CardCoverImageProps) {
   );
 }
 
-/** Capa no topo do detalhe, com estado de falha e opção de recarregar (scope §11.11). */
-export function CardCoverPreview({ url, width, height }: CardCoverImageProps) {
+/**
+ * Faixa de capa no topo do quadro: discreta (altura baixa e fixa) para não empurrar as listas.
+ * Se a imagem falhar, aparece o aviso com a opção de recarregar, sem derrubar o resto da tela.
+ */
+export function BoardCoverBanner({ url, width, height }: BoardCoverImageProps) {
   const { failed, attempt, fail, retry } = useLoadState(url);
 
   if (failed) {
     return (
       <div
         role="status"
-        className={`flex flex-col items-center justify-center gap-2 rounded-lg bg-surface-sunken p-4 text-muted ${ASPECT}`}
+        className="flex h-20 flex-wrap items-center justify-center gap-2 rounded-lg bg-surface-sunken px-4 text-muted sm:h-24"
       >
-        <ImageOff aria-hidden size={20} />
+        <ImageOff aria-hidden size={18} />
         <p>{COVER_MESSAGES.loadFailed}</p>
         <Button variant="secondary" size="sm" onClick={retry}>
           {COVER_MESSAGES.reload}
@@ -79,11 +78,11 @@ export function CardCoverPreview({ url, width, height }: CardCoverImageProps) {
   }
 
   return (
-    <div className={`overflow-hidden rounded-lg bg-surface-sunken ${ASPECT}`}>
+    <div className="h-20 overflow-hidden rounded-lg bg-surface-sunken sm:h-24">
       <img
         key={attempt}
         src={url}
-        alt={COVER_MESSAGES.detailAlt}
+        alt={COVER_MESSAGES.alt}
         width={width ?? undefined}
         height={height ?? undefined}
         decoding="async"

@@ -2,36 +2,36 @@ import {
   activitiesResponseSchema,
   applyPlacement,
   archivedCardSchema,
-  boardArchivedCardSchema,
   boardArchivedResponseSchema,
+  boardCoverUploadUrlRequestSchema,
+  boardCoverUploadUrlResponseSchema,
   boardPayloadSchema,
   boardResponseSchema,
   boardsResponseSchema,
+  boardViewersResponseSchema,
+  canAccessBoard,
+  confirmBoardCoverRequestSchema,
+  isBoardCoverKey,
+  lockedBoardSchema,
+  updateBoardVisibilityRequestSchema,
   cardDetailResponseSchema,
   cardMutationResultSchema,
   cardSummaryResponseSchema,
   cardAssigneesResponseSchema,
   cardLabelsResponseSchema,
   cardSummarySchema,
-  cardCoverUploadUrlRequestSchema,
-  cardCoverUploadUrlResponseSchema,
-  cardViewersResponseSchema,
-  canAccessCard,
   checklistItemResponseSchema,
   checklistProgress,
   checklistResponseSchema,
   commentResponseSchema,
   comparePriority,
   completeTargetListId,
-  confirmCardCoverRequestSchema,
   completionChangeOnMove,
   createChecklistItemRequestSchema,
   createChecklistRequestSchema,
   createCommentRequestSchema,
   createLabelRequestSchema,
-  isCardCoverKey,
   labelResponseSchema,
-  lockedCardSchema,
   moveChecklistItemRequestSchema,
   updateChecklistItemRequestSchema,
   updateChecklistRequestSchema,
@@ -52,15 +52,13 @@ import {
   updateCardRequestSchema,
   sortByPosition,
   updateBoardRequestSchema,
-  updateCardVisibilityRequestSchema,
   updateListRequestSchema,
   updateListResponseSchema,
   usersResponseSchema,
   type Activity,
   type ActivityEntry,
   type AuthSessionResponse,
-  type Board,
-  type BoardCard,
+  type BoardDetail,
   type CardSummary,
   type Checklist,
   type Comment,
@@ -85,6 +83,8 @@ import { apiErrorResponse, sessionFixture } from './auth-handlers';
 export const BOARD_ID = ID.board;
 export const ARCHIVED_BOARD_ID = ID.board2;
 export const OTHER_BOARD_ID = '8f5a3b4c-6d7e-4f8a-9b0c-2d3e4f5a6b7c';
+/** Quadro restrito do seed: só a Ana (e Admins) enxergam (ADR 0015). */
+export const RESTRICTED_BOARD_ID = '9e6b4c5d-7e8f-4a9b-8c0d-3e4f5a6b7c8d';
 export const OTHER_LIST_IDS = {
   backlog: '4a5b6c7d-8e9f-4a0b-9c1d-2e3f4a5b6c7d',
   delivered: '5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d8e',
@@ -101,18 +101,20 @@ export const LIST_IDS = {
   done: '3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f',
 } as const;
 
-/** Card no "banco": face + campos do detalhe (lista de acesso inclusa, ADR 0015). */
+/** Card no "banco": face + campos do detalhe. */
 export type CardRecord = CardSummary & {
   description: string;
-  viewerIds: string[];
   completedBy: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
 };
 
+/** Quadro no "banco": o quadro aberto, a lista de acesso e quem criou (ADR 0015). */
+export type BoardRecord = BoardDetail & { createdBy: string };
+
 interface BoardDb {
-  boards: Board[];
+  boards: BoardRecord[];
   lists: List[];
   cards: CardRecord[];
   labels: Label[];
@@ -141,10 +143,7 @@ function seedCard(id: string, listId: string, title: string, key: string): CardR
     checklist: { done: 0, total: 0 },
     commentCount: 0,
     hasDescription: false,
-    visibility: 'team',
-    cover: null,
     description: '',
-    viewerIds: [],
     completedBy: null,
     createdBy: ACTOR_ID,
     createdAt: T0,
@@ -152,13 +151,34 @@ function seedCard(id: string, listId: string, title: string, key: string): CardR
   };
 }
 
+/** Quadro do seed: visível para a equipe e sem capa (a capa entra no teste que a envia). */
+function seedBoard(id: string, name: string, changes: Partial<BoardRecord> = {}): BoardRecord {
+  return {
+    ...boardFixture,
+    id,
+    name,
+    locked: false,
+    visibility: 'team',
+    cover: null,
+    viewerIds: [],
+    createdBy: ACTOR_ID,
+    archivedAt: null,
+    ...changes,
+  };
+}
+
 function seed(): BoardDb {
   const [k0, k1, k2] = generateNKeysBetween(null, null, 3) as [string, string, string];
   return {
     boards: [
-      boardFixture,
-      { ...boardFixture, id: ARCHIVED_BOARD_ID, name: 'Antigo', archivedAt: T0 },
-      { ...boardFixture, id: OTHER_BOARD_ID, name: 'Vendas' },
+      seedBoard(BOARD_ID, 'Marketing'),
+      seedBoard(ARCHIVED_BOARD_ID, 'Antigo', { archivedAt: T0 }),
+      seedBoard(OTHER_BOARD_ID, 'Vendas'),
+      // Quadro restrito à Ana (Admin): o Member Bruno o vê com cadeado na lista.
+      seedBoard(RESTRICTED_BOARD_ID, 'Diretoria', {
+        visibility: 'restricted',
+        viewerIds: [ACTOR_ID],
+      }),
     ],
     lists: [
       {
@@ -271,10 +291,10 @@ function validationError(error: z.ZodError) {
 
 const now = () => new Date().toISOString();
 
-/** Quem está logado no mock (o `me` padrão): muda nos testes de permissão e de card restrito. */
+/** Quem está logado no mock (o `me` padrão): muda nos testes de permissão e de quadro restrito. */
 export const mockActor = { id: sessionFixture.user.id, role: 'admin' as 'admin' | 'member' };
 
-/** Sessão do Member Bruno Lima (sem acesso implícito a card restrito). */
+/** Sessão do Member Bruno Lima (sem acesso implícito a quadro restrito). */
 export const memberSession: AuthSessionResponse = {
   ...sessionFixture,
   user: { id: MEMBER_ID, name: 'Bruno Lima', email: 'bruno@empresa.com', role: 'member' },
@@ -286,23 +306,35 @@ export function signInAsMember(): void {
   mockActor.role = 'member';
 }
 
-/** R2 simulado (ADR 0016): `enabled: false` = instância sem capa (`features.cardCovers: false`). */
+/** R2 simulado (ADR 0016): `enabled: false` = instância sem capa (`features.boardCovers: false`). */
 export const coverStorage = { enabled: true };
 export const R2_ORIGIN = 'https://capas.exemplo';
 
-/** Acesso ao card (ADR 0015): `team`, Admin ou estar na lista de acesso. */
-function canOpen(card: CardRecord): boolean {
-  return canAccessCard(card, { id: mockActor.id, role: mockActor.role });
+/** Acesso ao quadro (ADR 0015): `team`, Admin ou estar na lista de acesso. */
+function canOpenBoard(board: BoardRecord): boolean {
+  return canAccessBoard(board, { id: mockActor.id, role: mockActor.role });
 }
 
-/** `true` se o card existe e o usuário do mock pode abri-lo (usado pelas notificações). */
-export function canOpenCard(cardId: string): boolean {
-  const card = findCard(cardId);
-  return card === undefined || canOpen(card);
-}
+/** Quadro restrito para quem não tem acesso: só `{ id, name, locked }`. */
+const lockedBoard = (board: BoardRecord) => lockedBoardSchema.parse({ ...board, locked: true });
 
-const cardRestricted = () =>
-  apiErrorResponse('CARD_RESTRICTED', { message: 'Você não tem acesso a este card.' });
+const boardRestricted = () =>
+  apiErrorResponse('BOARD_RESTRICTED', { message: 'Você não tem acesso a este quadro.' });
+
+/** Dá uma capa já enviada ao quadro (para os testes de trocar e remover). */
+export function seedBoardCover(boardId: string, { width = 1600, height = 900 } = {}): string {
+  const objectKey = `covers/${boardId}/${randomUUID().replaceAll('-', '').slice(0, 32)}`;
+  boardDb.storage.add(objectKey);
+  setBoard(boardId, {
+    cover: {
+      url: `${R2_ORIGIN}/${objectKey}?X-Amz-Signature=leitura`,
+      width,
+      height,
+      expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+    },
+  });
+  return objectKey;
+}
 
 function activeLists(boardId: string): List[] {
   return sortByPosition(
@@ -336,14 +368,14 @@ function updateList(listId: string, changes: Partial<List>): List {
   return updated as List;
 }
 
-function setBoard(boardId: string, changes: Partial<Board>): Board {
-  let updated: Board | undefined;
+function setBoard(boardId: string, changes: Partial<BoardRecord>): BoardRecord {
+  let updated: BoardRecord | undefined;
   boardDb.boards = boardDb.boards.map((board) => {
     if (board.id !== boardId) return board;
     updated = { ...board, ...changes, updatedAt: now() };
     return updated;
   });
-  return updated as Board;
+  return updated as BoardRecord;
 }
 
 // ---------------------------------------------------------------------------
@@ -391,26 +423,6 @@ export function seedActivities(
   }
 }
 
-/** Deixa um card restrito no "banco", com a lista de acesso informada (ADR 0015). */
-export function seedRestrictedCard(cardId: string, viewerIds: readonly string[] = []): void {
-  updateCard(cardId, { visibility: 'restricted', viewerIds: [...viewerIds] });
-}
-
-/** Dá uma capa ao card no "banco", como se o envio já tivesse acontecido (ADR 0016). */
-export function seedCover(cardId: string, { width = 1600, height = 900 } = {}): string {
-  const objectKey = `covers/${cardId}/${randomUUID().replaceAll('-', '').slice(0, 32)}`;
-  boardDb.storage.add(objectKey);
-  updateCard(cardId, {
-    cover: {
-      url: `${R2_ORIGIN}/${objectKey}?X-Amz-Signature=leitura`,
-      width,
-      height,
-      expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
-    },
-  });
-  return objectKey;
-}
-
 /** Agregados da face calculados como no backend: soma dos checklists e contagem de comentários. */
 function withAggregates<T extends CardRecord>(card: T): T {
   return {
@@ -422,12 +434,6 @@ function withAggregates<T extends CardRecord>(card: T): T {
 
 const summary = (card: CardRecord) => cardSummarySchema.parse(withAggregates(card));
 
-/** Card restrito para quem não tem acesso: só `{ id, listId, position, title, locked }`. */
-const locked = (card: CardRecord) => lockedCardSchema.parse({ ...card, locked: true });
-
-/** Face do card como o servidor devolveria para o usuário do mock (ADR 0015). */
-const boardCard = (card: CardRecord): BoardCard => (canOpen(card) ? summary(card) : locked(card));
-
 function detail(card: CardRecord) {
   const board = findBoard(card.boardId);
   const list = findList(card.listId);
@@ -435,7 +441,6 @@ function detail(card: CardRecord) {
     card: {
       ...withAggregates(card),
       hasDescription: card.description !== '',
-      viewerIds: card.visibility === 'restricted' ? card.viewerIds : [],
       board: { id: card.boardId, name: board?.name ?? '', archived: Boolean(board?.archivedAt) },
       list: {
         id: card.listId,
@@ -465,11 +470,9 @@ const reopened = () => ({ status: 'open' as const, completedAt: null, completedB
 // Responsáveis, etiquetas, checklists e comentários (api.md §11 a §14)
 // ---------------------------------------------------------------------------
 
-/** Ordem do contrato (api.md §3): 404 → `403 CARD_RESTRICTED` → `409 BOARD_ARCHIVED`. */
 function writableCard(cardId: unknown) {
   const card = findCard(cardId);
   if (!card) return { error: apiErrorResponse('NOT_FOUND') } as const;
-  if (!canOpen(card)) return { error: cardRestricted() } as const;
   if (findBoard(card.boardId)?.archivedAt) {
     return { error: apiErrorResponse('BOARD_ARCHIVED') } as const;
   }
@@ -518,11 +521,6 @@ const assigneeHandlers = [
       assigneeIds = [...assigneeIds, user.id];
       updateCard(found.card.id, { assigneeIds });
       record(found.card.id, { type: 'card_assignee_added', data: { userId: user.id } });
-      // RN31: responsavel de card restrito entra na lista de acesso na mesma transacao.
-      if (found.card.visibility === 'restricted' && !found.card.viewerIds.includes(user.id)) {
-        updateCard(found.card.id, { viewerIds: [...found.card.viewerIds, user.id] });
-        record(found.card.id, { type: 'card_viewer_added', data: { userId: user.id } });
-      }
     }
     return HttpResponse.json(cardAssigneesResponseSchema.parse({ assigneeIds }));
   }),
@@ -840,7 +838,6 @@ function myCards() {
       const list = findList(card.listId);
       return (
         card.assigneeIds.includes(mockActor.id) &&
-        canOpen(card) &&
         card.status === 'open' &&
         !card.archivedAt &&
         list !== undefined &&
@@ -867,167 +864,6 @@ function myCards() {
     });
   return myCardsResponseSchema.parse({ cards });
 }
-
-const notRestricted = () =>
-  apiErrorResponse('CARD_NOT_RESTRICTED', { message: 'Este card esta visivel para a equipe.' });
-
-/** `PUT /api/cards/:cardId/visibility` e lista de acesso (api.md secao 11, ADR 0015). */
-const visibilityHandlers = [
-  http.put('/api/cards/:cardId/visibility', async ({ request, params }) => {
-    const parsed = updateCardVisibilityRequestSchema.safeParse(
-      await readBody(request, 'cards/visibility'),
-    );
-    if (!parsed.success) return validationError(parsed.error);
-    const found = writableCard(params.cardId);
-    if (found.error) return found.error;
-    const { card } = found;
-    const { visibility } = parsed.data;
-    if (visibility === card.visibility) return HttpResponse.json(detail(card));
-
-    record(card.id, {
-      type: 'card_visibility_changed',
-      data: { from: card.visibility, to: visibility },
-    });
-    if (visibility === 'team') {
-      return HttpResponse.json(detail(updateCard(card.id, { visibility, viewerIds: [] })));
-    }
-    // Ator, criador e responsaveis atuais entram na lista (RN30), na ordem de inclusao.
-    const viewerIds: string[] = [];
-    for (const userId of [mockActor.id, card.createdBy, ...card.assigneeIds]) {
-      if (!viewerIds.includes(userId)) viewerIds.push(userId);
-    }
-    const updated = updateCard(card.id, { visibility, viewerIds });
-    for (const userId of viewerIds) {
-      record(card.id, { type: 'card_viewer_added', data: { userId } });
-    }
-    return HttpResponse.json(detail(updated));
-  }),
-
-  http.put('/api/cards/:cardId/viewers/:userId', async ({ request, params }) => {
-    await readBody(request, 'cards/viewers/add');
-    const found = writableCard(params.cardId);
-    if (found.error) return found.error;
-    if (found.card.visibility !== 'restricted') return notRestricted();
-    const user = adminDb.users.find((item) => item.id === params.userId);
-    if (!user) return apiErrorResponse('NOT_FOUND');
-    if (user.status !== 'active') {
-      return apiErrorResponse('USER_NOT_ACTIVE', { message: 'Usuario desativado.' });
-    }
-    let { viewerIds } = found.card;
-    if (!viewerIds.includes(user.id)) {
-      viewerIds = [...viewerIds, user.id];
-      updateCard(found.card.id, { viewerIds });
-      record(found.card.id, { type: 'card_viewer_added', data: { userId: user.id } });
-    }
-    return HttpResponse.json(cardViewersResponseSchema.parse({ viewerIds }));
-  }),
-
-  http.delete('/api/cards/:cardId/viewers/:userId', async ({ request, params }) => {
-    await readBody(request, 'cards/viewers/remove');
-    const found = writableCard(params.cardId);
-    if (found.error) return found.error;
-    if (found.card.visibility !== 'restricted') return notRestricted();
-    let { viewerIds } = found.card;
-    const userId = String(params.userId);
-    if (viewerIds.includes(userId)) {
-      viewerIds = viewerIds.filter((id) => id !== userId);
-      updateCard(found.card.id, { viewerIds });
-      record(found.card.id, { type: 'card_viewer_removed', data: { userId } });
-    }
-    return HttpResponse.json(cardViewersResponseSchema.parse({ viewerIds }));
-  }),
-];
-
-const coverUnavailable = () =>
-  apiErrorResponse('COVER_STORAGE_UNAVAILABLE', {
-    message: 'As capas de card nao estao disponiveis agora.',
-  });
-
-const randomKey = () => randomUUID().replaceAll('-', '').slice(0, 32);
-
-/** URL de leitura "assinada": curta duracao, como no R2 (ADR 0016). */
-function signedCover(objectKey: string, width: number | null, height: number | null) {
-  return {
-    url: `${R2_ORIGIN}/${objectKey}?X-Amz-Signature=leitura`,
-    width,
-    height,
-    expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
-  };
-}
-
-/** Capa em tres passos (api.md secao 11, ADR 0016), com o `PUT` direto no R2 simulado. */
-const coverHandlers = [
-  http.put(`${R2_ORIGIN}/*`, async ({ request }) => {
-    const objectKey = new URL(request.url).pathname.slice(1);
-    boardDb.requests.push({
-      method: 'PUT',
-      path: 'r2/upload',
-      body: { objectKey, contentType: request.headers.get('Content-Type') },
-    });
-    await request.arrayBuffer();
-    boardDb.storage.add(objectKey);
-    return new HttpResponse(null, { status: 200 });
-  }),
-
-  http.post('/api/cards/:cardId/cover/upload-url', async ({ request, params }) => {
-    const parsed = cardCoverUploadUrlRequestSchema.safeParse(
-      await readBody(request, 'cards/cover/upload-url'),
-    );
-    if (!parsed.success) return validationError(parsed.error);
-    const found = writableCard(params.cardId);
-    if (found.error) return found.error;
-    if (!coverStorage.enabled) return coverUnavailable();
-    const objectKey = `covers/${found.card.id}/${randomKey()}`;
-    return HttpResponse.json(
-      cardCoverUploadUrlResponseSchema.parse({
-        uploadUrl: `${R2_ORIGIN}/${objectKey}?X-Amz-Signature=envio`,
-        objectKey,
-        expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
-        headers: { 'Content-Type': parsed.data.contentType },
-      }),
-    );
-  }),
-
-  http.put('/api/cards/:cardId/cover', async ({ request, params }) => {
-    const parsed = confirmCardCoverRequestSchema.safeParse(await readBody(request, 'cards/cover'));
-    if (!parsed.success) return validationError(parsed.error);
-    const found = writableCard(params.cardId);
-    if (found.error) return found.error;
-    if (!coverStorage.enabled) return coverUnavailable();
-    const { objectKey, width, height } = parsed.data;
-    if (!isCardCoverKey(objectKey, found.card.id)) {
-      return apiErrorResponse('VALIDATION_ERROR', { message: 'Chave invalida.' });
-    }
-    // Sem objeto no bucket a API nao confirma nada (HEAD + magic bytes no servidor real).
-    if (!boardDb.storage.has(objectKey)) {
-      return apiErrorResponse('COVER_UPLOAD_INVALID', {
-        message: 'Nao foi possivel confirmar a imagem enviada.',
-      });
-    }
-    const previous = found.card.cover;
-    if (previous) {
-      for (const key of [...boardDb.storage]) {
-        if (previous.url.includes(key)) boardDb.storage.delete(key);
-      }
-    }
-    const updated = updateCard(found.card.id, {
-      cover: signedCover(objectKey, width ?? null, height ?? null),
-    });
-    record(found.card.id, { type: 'card_cover_changed', data: {} });
-    return HttpResponse.json(detail(updated));
-  }),
-
-  http.delete('/api/cards/:cardId/cover', async ({ request, params }) => {
-    await readBody(request, 'cards/cover/delete');
-    const found = writableCard(params.cardId);
-    if (found.error) return found.error;
-    if (!coverStorage.enabled) return coverUnavailable();
-    if (!found.card.cover) return HttpResponse.json(detail(found.card));
-    const updated = updateCard(found.card.id, { cover: null });
-    record(found.card.id, { type: 'card_cover_removed', data: {} });
-    return HttpResponse.json(detail(updated));
-  }),
-];
 
 const cardHandlers = [
   http.get('/api/me/cards', () => HttpResponse.json(myCards())),
@@ -1062,11 +898,7 @@ const cardHandlers = [
       commentCount: 0,
       hasDescription: false,
       archivedAt: null,
-      locked: false,
-      visibility: 'team',
-      cover: null,
       description: '',
-      viewerIds: [],
       completedBy: null,
       createdBy: ACTOR_ID,
       createdAt: now(),
@@ -1080,14 +912,12 @@ const cardHandlers = [
   http.get('/api/cards/:cardId', ({ params }) => {
     const card = findCard(params.cardId);
     if (!card) return apiErrorResponse('NOT_FOUND', { message: 'Card não encontrado.' });
-    if (!canOpen(card)) return cardRestricted();
     return HttpResponse.json(detail(card));
   }),
 
   http.get('/api/cards/:cardId/activity', ({ params }) => {
     const card = findCard(params.cardId);
     if (!card) return apiErrorResponse('NOT_FOUND');
-    if (!canOpen(card)) return cardRestricted();
     const activities = boardDb.activities
       .filter((item) => item.cardId === card.id)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -1099,7 +929,6 @@ const cardHandlers = [
     if (!parsed.success) return validationError(parsed.error);
     const card = findCard(params.cardId);
     if (!card) return apiErrorResponse('NOT_FOUND');
-    if (!canOpen(card)) return cardRestricted();
     if (findBoard(card.boardId)?.archivedAt) return apiErrorResponse('BOARD_ARCHIVED');
     const { title, description, priority, due } = parsed.data;
     const dueAt =
@@ -1138,15 +967,12 @@ const cardHandlers = [
   ...labelHandlers,
   ...checklistHandlers,
   ...commentHandlers,
-  ...visibilityHandlers,
-  ...coverHandlers,
 
   http.post('/api/cards/:cardId/:action', async ({ request, params }) => {
     const action = String(params.action);
     const body = await readBody(request, `cards/${action}`);
     const card = findCard(params.cardId);
     if (!card) return apiErrorResponse('NOT_FOUND');
-    if (!canOpen(card)) return cardRestricted();
     if (findBoard(card.boardId)?.archivedAt) return apiErrorResponse('BOARD_ARCHIVED');
 
     if (action === 'move') {
@@ -1262,20 +1088,190 @@ const cardHandlers = [
   }),
 ];
 
+/** `PUT /api/boards/:boardId/visibility` e lista de acesso (Fatia 11, ADR 0015). */
+const visibilityHandlers = [
+  http.put('/api/boards/:boardId/visibility', async ({ request, params }) => {
+    const parsed = updateBoardVisibilityRequestSchema.safeParse(
+      await readBody(request, 'boards/visibility'),
+    );
+    if (!parsed.success) return validationError(parsed.error);
+    const board = findBoard(params.boardId);
+    if (!board) return apiErrorResponse('NOT_FOUND');
+    if (!canOpenBoard(board)) return boardRestricted();
+    if (board.archivedAt) return apiErrorResponse('BOARD_ARCHIVED');
+
+    const { visibility } = parsed.data;
+    if (visibility === board.visibility) return HttpResponse.json({ board });
+    if (visibility === 'team') {
+      return HttpResponse.json(
+        boardResponseSchema.parse({ board: setBoard(board.id, { visibility, viewerIds: [] }) }),
+      );
+    }
+    // RN30: a lista inicial é quem restringiu mais quem criou o quadro — ninguém se tranca fora.
+    const viewerIds = [...board.viewerIds];
+    for (const userId of [mockActor.id, board.createdBy]) {
+      if (!viewerIds.includes(userId)) viewerIds.push(userId);
+    }
+    return HttpResponse.json(
+      boardResponseSchema.parse({ board: setBoard(board.id, { visibility, viewerIds }) }),
+    );
+  }),
+
+  http.put('/api/boards/:boardId/viewers/:userId', async ({ request, params }) => {
+    await readBody(request, 'boards/viewers');
+    const board = findBoard(params.boardId);
+    if (!board) return apiErrorResponse('NOT_FOUND');
+    if (!canOpenBoard(board)) return boardRestricted();
+    if (board.archivedAt) return apiErrorResponse('BOARD_ARCHIVED');
+    if (board.visibility !== 'restricted') {
+      return apiErrorResponse('BOARD_NOT_RESTRICTED', {
+        message: 'Este quadro voltou a ser visível para a equipe.',
+      });
+    }
+    const user = adminDb.users.find((item) => item.id === params.userId);
+    if (!user) return apiErrorResponse('NOT_FOUND');
+    if (user.status !== 'active') {
+      return apiErrorResponse('USER_NOT_ACTIVE', { message: 'Essa pessoa foi desativada.' });
+    }
+    const viewerIds = board.viewerIds.includes(user.id)
+      ? board.viewerIds
+      : [...board.viewerIds, user.id];
+    setBoard(board.id, { viewerIds });
+    return HttpResponse.json(boardViewersResponseSchema.parse({ viewerIds }));
+  }),
+
+  http.delete('/api/boards/:boardId/viewers/:userId', async ({ request, params }) => {
+    await readBody(request, 'boards/viewers/delete');
+    const board = findBoard(params.boardId);
+    if (!board) return apiErrorResponse('NOT_FOUND');
+    if (!canOpenBoard(board)) return boardRestricted();
+    if (board.archivedAt) return apiErrorResponse('BOARD_ARCHIVED');
+    if (board.visibility !== 'restricted') {
+      return apiErrorResponse('BOARD_NOT_RESTRICTED', {
+        message: 'Este quadro voltou a ser visível para a equipe.',
+      });
+    }
+    // A lista pode ficar vazia: o quadro segue restrito e só Admins abrem (RN38).
+    const viewerIds = board.viewerIds.filter((id) => id !== params.userId);
+    setBoard(board.id, { viewerIds });
+    return HttpResponse.json(boardViewersResponseSchema.parse({ viewerIds }));
+  }),
+];
+
+const coverUnavailable = () =>
+  apiErrorResponse('COVER_STORAGE_UNAVAILABLE', {
+    message: 'As capas de quadro não estão disponíveis agora.',
+  });
+
+const randomKey = () => randomUUID().replaceAll('-', '').slice(0, 32).padEnd(32, 'a');
+
+/** URL assinada de leitura: muda a cada troca de capa, como a do R2. */
+function signedCover(objectKey: string, width: number | null, height: number | null) {
+  return {
+    url: `${R2_ORIGIN}/${objectKey}?X-Amz-Signature=${randomKey()}`,
+    width,
+    height,
+    expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+  };
+}
+
+/** Capa do quadro em três passos (ADR 0016) mais o `PUT` direto no "R2". */
+const coverHandlers = [
+  http.put(`${R2_ORIGIN}/*`, async ({ request }) => {
+    const objectKey = new URL(request.url).pathname.slice(1);
+    boardDb.requests.push({
+      method: 'PUT',
+      path: 'r2/upload',
+      body: { objectKey, contentType: request.headers.get('Content-Type') },
+    });
+    await request.arrayBuffer();
+    boardDb.storage.add(objectKey);
+    return new HttpResponse(null, { status: 200 });
+  }),
+
+  http.post('/api/boards/:boardId/cover/upload-url', async ({ request, params }) => {
+    const parsed = boardCoverUploadUrlRequestSchema.safeParse(
+      await readBody(request, 'boards/cover/upload-url'),
+    );
+    if (!parsed.success) return validationError(parsed.error);
+    const board = findBoard(params.boardId);
+    if (!board) return apiErrorResponse('NOT_FOUND');
+    if (!canOpenBoard(board)) return boardRestricted();
+    if (board.archivedAt) return apiErrorResponse('BOARD_ARCHIVED');
+    if (!coverStorage.enabled) return coverUnavailable();
+    const objectKey = `covers/${board.id}/${randomKey()}`;
+    return HttpResponse.json(
+      boardCoverUploadUrlResponseSchema.parse({
+        uploadUrl: `${R2_ORIGIN}/${objectKey}`,
+        objectKey,
+        expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+        headers: { 'Content-Type': parsed.data.contentType },
+      }),
+    );
+  }),
+
+  http.put('/api/boards/:boardId/cover', async ({ request, params }) => {
+    const parsed = confirmBoardCoverRequestSchema.safeParse(
+      await readBody(request, 'boards/cover'),
+    );
+    if (!parsed.success) return validationError(parsed.error);
+    const board = findBoard(params.boardId);
+    if (!board) return apiErrorResponse('NOT_FOUND');
+    if (!canOpenBoard(board)) return boardRestricted();
+    if (board.archivedAt) return apiErrorResponse('BOARD_ARCHIVED');
+    if (!coverStorage.enabled) return coverUnavailable();
+    const { objectKey, width, height } = parsed.data;
+    // A chave precisa ser deste quadro e ter sido criada por uma URL que a API assinou.
+    if (!isBoardCoverKey(objectKey, board.id) || !boardDb.storage.has(objectKey)) {
+      return apiErrorResponse('COVER_UPLOAD_INVALID', {
+        message: 'Não foi possível confirmar a capa.',
+      });
+    }
+    const updated = setBoard(board.id, {
+      cover: signedCover(objectKey, width ?? null, height ?? null),
+    });
+    return HttpResponse.json(boardResponseSchema.parse({ board: updated }));
+  }),
+
+  http.delete('/api/boards/:boardId/cover', async ({ request, params }) => {
+    await readBody(request, 'boards/cover/delete');
+    const board = findBoard(params.boardId);
+    if (!board) return apiErrorResponse('NOT_FOUND');
+    if (!canOpenBoard(board)) return boardRestricted();
+    if (board.archivedAt) return apiErrorResponse('BOARD_ARCHIVED');
+    if (!coverStorage.enabled) return coverUnavailable();
+    // Idempotente: quadro sem capa responde 200 sem mudar nada.
+    if (!board.cover) return HttpResponse.json(boardResponseSchema.parse({ board }));
+    return HttpResponse.json(
+      boardResponseSchema.parse({ board: setBoard(board.id, { cover: null }) }),
+    );
+  }),
+];
+
 export const boardHandlers = [
   ...cardHandlers,
+  ...visibilityHandlers,
+  ...coverHandlers,
   http.get('/api/boards', ({ request }) => {
     const archived = new URL(request.url).searchParams.get('archived') === 'true';
-    const boards = boardDb.boards.filter((board) => (board.archivedAt !== null) === archived);
+    // Quadro restrito sem acesso vem como `LockedBoard`: o corte é no servidor (scope §11.8).
+    const boards = boardDb.boards
+      .filter((board) => (board.archivedAt !== null) === archived)
+      .map((board) => (canOpenBoard(board) ? board : lockedBoard(board)));
     return HttpResponse.json(boardsResponseSchema.parse({ boards }));
   }),
 
   http.post('/api/boards', async ({ request }) => {
     const parsed = createBoardRequestSchema.safeParse(await readBody(request, 'boards'));
     if (!parsed.success) return validationError(parsed.error);
-    const board: Board = {
+    const board: BoardRecord = {
+      locked: false,
       id: randomUUID(),
       name: parsed.data.name,
+      visibility: 'team',
+      cover: null,
+      viewerIds: [],
+      createdBy: mockActor.id,
       archivedAt: null,
       createdAt: now(),
       updatedAt: now(),
@@ -1297,11 +1293,13 @@ export const boardHandlers = [
   http.get('/api/boards/:boardId', ({ params }) => {
     const board = findBoard(params.boardId);
     if (!board) return apiErrorResponse('NOT_FOUND', { message: 'Quadro não encontrado.' });
+    // Ordem 404 → 403: o quadro existe e o nome já é público na lista (scope §11.8).
+    if (!canOpenBoard(board)) return boardRestricted();
     const lists = activeLists(board.id);
     const listIds = new Set(lists.map((list) => list.id));
     const cards = boardDb.cards
       .filter((card) => listIds.has(card.listId) && !card.archivedAt)
-      .map((card) => boardCard(withAggregates(card)));
+      .map(withAggregates);
     const labels = boardDb.labels
       .filter((label) => label.boardId === board.id)
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
@@ -1382,7 +1380,6 @@ export const boardHandlers = [
       .filter((card) => card.boardId === board.id && card.archivedAt)
       .sort((x, y) => (y.archivedAt ?? '').localeCompare(x.archivedAt ?? ''))
       .map((card) => {
-        if (!canOpen(card)) return boardArchivedCardSchema.parse(locked(card));
         const list = findList(card.listId);
         return archivedCardSchema.parse({
           ...card,

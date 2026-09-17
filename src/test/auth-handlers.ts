@@ -20,13 +20,14 @@ export const sessionFixture: AuthSessionResponse = authSessionResponseSchema.par
     role: 'admin',
   },
   workspace: { name: 'Equipe Ronin', timezone: 'America/Sao_Paulo' },
-  features: { cardCovers: true },
+  // `boardCovers` reflete a configuração do R2 na instância (ADR 0016).
+  features: { boardCovers: true },
 });
 
-/** Instância sem R2 configurado: a UI não oferece capa (ADR 0016). */
+/** Sessão de uma instância sem R2: as rotas de capa respondem 503 e o ⋯ não oferece capa. */
 export const sessionWithoutCovers: AuthSessionResponse = {
   ...sessionFixture,
-  features: { cardCovers: false },
+  features: { boardCovers: false },
 };
 
 interface ErrorInit {

@@ -17,7 +17,6 @@ import {
   cardActivityQueryKey,
   cardQueryKey,
   cardsInList,
-  findUnlockedCard,
   keyBetween,
   mergeSummary,
   restoreCardPlacement,
@@ -56,7 +55,7 @@ export function restoreMyCard(
  * o card vai para o fim dela. Reabrir não é otimista: a lista de destino vem da resposta.
  */
 function completeInPayload(payload: BoardPayload, cardId: string): BoardPayload {
-  const card = findUnlockedCard(payload.cards, cardId);
+  const card = payload.cards.find((item) => item.id === cardId);
   if (!card) return payload;
   const targetListId = completeTargetListId(card, payload.lists);
   const last =
@@ -72,7 +71,7 @@ function completeInPayload(payload: BoardPayload, cardId: string): BoardPayload 
   return {
     ...payload,
     cards: payload.cards.map((item) =>
-      item.id === cardId ? { ...card, ...moved, status: 'completed' as const, completedAt } : item,
+      item.id === cardId ? { ...item, ...moved, status: 'completed', completedAt } : item,
     ),
   };
 }
@@ -101,10 +100,9 @@ export function useCardCompletion() {
       const myCards = queryClient.getQueryData<MyCard[]>(myCardsQueryKey) ?? [];
       const myCardIndex = myCards.findIndex((item) => item.id === card.id);
       const snapshot: CompletionSnapshot = {
-        card: findUnlockedCard(
-          queryClient.getQueryData<BoardPayload>(boardQueryKey(card.boardId))?.cards,
-          card.id,
-        ),
+        card: queryClient
+          .getQueryData<BoardPayload>(boardQueryKey(card.boardId))
+          ?.cards.find((item) => item.id === card.id),
         detail: queryClient.getQueryData<CardDetail>(cardQueryKey(card.id)),
         myCard:
           myCardIndex === -1
@@ -114,7 +112,7 @@ export function useCardCompletion() {
       if (action === 'complete') {
         setBoardData(queryClient, card.boardId, (payload) => completeInPayload(payload, card.id));
         const next = queryClient.getQueryData<BoardPayload>(boardQueryKey(card.boardId));
-        const summary = findUnlockedCard(next?.cards, card.id) ?? {
+        const summary = next?.cards.find((item) => item.id === card.id) ?? {
           ...card,
           status: 'completed' as const,
           completedAt: new Date().toISOString(),

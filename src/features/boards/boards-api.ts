@@ -9,6 +9,7 @@ import {
   sortByPosition,
   updateListResponseSchema,
   type Board,
+  type BoardListItem,
   type BoardPayload,
   type CreateListRequestInput,
   type List,
@@ -35,8 +36,14 @@ export const archivedItemsQueryKey = (boardId: string) => ['board-archived', boa
 export const moveCardMutationKey = (boardId: string) => ['move-card', boardId] as const;
 const moveListMutationKey = (boardId: string) => ['move-list', boardId] as const;
 
-function sortBoards(boards: readonly Board[]): Board[] {
+/** Quadro restrito sem acesso entra na lista como `LockedBoard` (só id, nome e `locked`). */
+function sortBoards(boards: readonly BoardListItem[]): BoardListItem[] {
   return [...boards].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+}
+
+/** Só os quadros que a pessoa pode abrir (os bloqueados ficam de fora). */
+export function openBoards(boards: readonly BoardListItem[] | undefined): Board[] {
+  return (boards ?? []).filter((board): board is Board => !board.locked);
 }
 
 export function useBoards(archived: boolean) {
