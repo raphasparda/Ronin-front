@@ -28,6 +28,7 @@ Quem sobe o banco é dono dele e o para ao sair:
 | Cluster local rodando sem dono (processo anterior morto à força) | assume e para ao sair                             |
 | `DATABASE_URL` responde e não é o cluster local (Docker/nativo) | reaproveita, não para                             |
 | Porta ocupada por outro Postgres que recusa `kanban`            | erro explicando para ajustar a porta no `.env`    |
+| `DEV_DB_EXTERNAL_ONLY=true` (CI) e banco fora do ar             | erro; nunca sobe o cluster local (docs/ops/ci.md) |
 
 ## Migrations
 

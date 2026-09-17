@@ -16,6 +16,8 @@ O `pnpm dev` cria o `.env` (se não existir), sobe um PostgreSQL 18 local do pr�
 
 Detalhes, problemas comuns e como zerar o banco: [`docs/ops/setup-local.md`](docs/ops/setup-local.md).
 
+CI (GitHub Actions: lint, typecheck, testes, build e E2E): [`docs/ops/ci.md`](docs/ops/ci.md).
+
 ---
 
 Arquitetura: [`docs/architecture/overview.md`](docs/architecture/overview.md) · Contrato da API: [`docs/architecture/api.md`](docs/architecture/api.md) · Plano: [`docs/architecture/plan.md`](docs/architecture/plan.md).
