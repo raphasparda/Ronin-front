@@ -75,6 +75,23 @@ export default defineConfig(() => {
         '/api': { target: apiTarget, changeOrigin: false },
       },
     },
+    build: {
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            // Zod e `src/lib/zod-csp.ts` no mesmo chunk: o `z.config({ jitless: true })` roda
+            // antes de qualquer schema (os do @raphasparda/ronin-shared ficam em outro chunk e
+            // seriam avaliados antes do corpo de `main.tsx`). Veja docs/ops/deploy-render.md (CSP).
+            groups: [
+              {
+                name: 'zod',
+                test: /[\\/]node_modules[\\/]zod[\\/]|[\\/]src[\\/]lib[\\/]zod-csp\.ts$/,
+              },
+            ],
+          },
+        },
+      },
+    },
     preview: {
       port: 4173,
       strictPort: true,

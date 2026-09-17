@@ -1,3 +1,4 @@
+import './lib/zod-csp';
 import '@fontsource-variable/figtree/wght.css';
 import './styles/globals.css';
 
