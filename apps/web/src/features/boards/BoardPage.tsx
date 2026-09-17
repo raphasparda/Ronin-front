@@ -346,7 +346,9 @@ function BoardView() {
 
   return (
     <CardFaceDataProvider labels={payload.labels} search={location.search}>
-      <div className="flex flex-col gap-4">
+      {/* md+: o bloco tem a largura das listas e fica centralizado; com muitas listas ocupa
+          a largura toda e as listas rolam na horizontal. No celular segue o carrossel. */}
+      <div className="flex flex-col gap-4 md:mx-auto md:w-fit md:max-w-full">
         <title>{`${payload.board.name} · Ronin`}</title>
         <Link to="/" className="inline-flex items-center gap-1.5 self-start text-sm font-semibold">
           <ArrowLeft aria-hidden size={16} />
