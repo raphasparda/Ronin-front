@@ -20,3 +20,5 @@ blob-report/
 .DS_Store
 Thumbs.db
 
+# Configuração local de ferramentas e editores (nunca versionada)
+PRODUCT.md

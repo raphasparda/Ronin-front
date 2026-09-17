@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/playwright-report/**',
       '**/test-results/**',
+      // Pastas ocultas: configuração local de ferramentas e editores, fora do repositório.
+      '.*/**',
     ],
   },
   js.configs.recommended,
