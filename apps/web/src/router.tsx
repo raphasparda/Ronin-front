@@ -4,6 +4,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './features/auth/LoginPage';
 import { RequireAuth, type LoginLocationState } from './features/auth/RequireAuth';
 import { NotFoundPage } from './features/home/NotFoundPage';
+import { installPageTransitions } from './lib/page-transitions';
 import { loginPath } from './lib/safe-next';
 
 const devRoutes: RouteObject[] = import.meta.env.DEV
@@ -116,7 +117,9 @@ export const routes: RouteObject[] = [
 ];
 
 export function createAppRouter() {
-  return createBrowserRouter(routes);
+  const router = createBrowserRouter(routes);
+  installPageTransitions(router);
+  return router;
 }
 
 export type AppRouter = ReturnType<typeof createBrowserRouter>;

@@ -23,7 +23,7 @@ export function AppHeader() {
   const adminActive = pathname.startsWith('/admin');
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-surface shadow-sm">
+    <header className="sticky top-0 z-30 [view-transition-name:app-header] border-b border-border bg-surface shadow-sm">
       <div className="flex h-14 items-center gap-6 px-4 md:px-6">
         <Logo asLink />
         <nav aria-label="Principal" className="hidden md:block">

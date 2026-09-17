@@ -366,3 +366,86 @@
     transform: none !important;
   }
 }
+
+/* =====================================================================
+   5. TRANSIÇÃO DE PÁGINA (estilo iOS) — View Transitions API
+   O tipo vem de html[data-nav-transition] (lib/page-transitions.ts).
+   Cabeçalho e barra inferior têm nome próprio e ficam parados.
+   ===================================================================== */
+:root {
+  --nav-duration: 420ms;
+  --nav-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --nav-shadow: -12px 0 32px rgb(0 0 0 / 0.22);
+}
+
+::view-transition-group(app-header),
+::view-transition-group(app-bottom-nav) {
+  animation-duration: 0ms;
+}
+
+:root[data-nav-transition='push']::view-transition-old(root),
+:root[data-nav-transition='push']::view-transition-new(root),
+:root[data-nav-transition='pop']::view-transition-old(root),
+:root[data-nav-transition='pop']::view-transition-new(root) {
+  mix-blend-mode: normal;
+  animation-duration: var(--nav-duration);
+  animation-timing-function: var(--nav-ease);
+  animation-fill-mode: both;
+}
+
+/* entrar: a nova tela chega da direita por cima; a anterior recua 30% e escurece */
+:root[data-nav-transition='push']::view-transition-old(root) {
+  animation-name: nav-recede;
+}
+:root[data-nav-transition='push']::view-transition-new(root) {
+  animation-name: nav-slide-in;
+  box-shadow: var(--nav-shadow);
+}
+
+/* voltar: a tela atual sai para a direita por cima; a anterior volta de -30% */
+:root[data-nav-transition='pop']::view-transition-old(root) {
+  z-index: 1;
+  animation-name: nav-slide-out;
+  box-shadow: var(--nav-shadow);
+}
+:root[data-nav-transition='pop']::view-transition-new(root) {
+  animation-name: nav-return;
+}
+
+/* trocar de seção no mesmo nível (como as abas do iPhone): fade curto */
+:root[data-nav-transition='fade']::view-transition-old(root),
+:root[data-nav-transition='fade']::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: var(--ease-standard);
+}
+
+@keyframes nav-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes nav-recede {
+  to {
+    transform: translateX(-30%);
+    filter: brightness(0.9);
+  }
+}
+@keyframes nav-slide-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes nav-return {
+  from {
+    transform: translateX(-30%);
+    filter: brightness(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
