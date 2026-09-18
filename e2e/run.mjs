@@ -3,8 +3,8 @@
 // A API vem do repositório irmão ronin-api (RONIN_API_DIR, padrão ../ronin-api; veja
 // scripts/ronin-api-dir.mjs), que precisa estar com `pnpm install` feito.
 // 1. Sobe (ou reaproveita) o PostgreSQL local de dev do ronin-api (scripts/dev-db, dados em
-//    <ronin-api>/.data) e cria o banco `kanban_e2e` no mesmo servidor do DATABASE_URL (lido do
-//    ambiente ou do .env do ronin-api). Os bancos `kanban` (dev) e `kanban_test` (Vitest) nunca
+//    <ronin-api>/.data) e cria o banco `ronin_e2e` no mesmo servidor do DATABASE_URL (lido do
+//    ambiente ou do .env do ronin-api). Os bancos `ronin` (dev) e `ronin_test` (Vitest) nunca
 //    são tocados: os testes truncam só o banco E2E.
 // 2. Aplica as migrations nesse banco (`pnpm run db:migrate` no ronin-api).
 // 3. Roda `playwright test` (argumentos extras são repassados, ex.: `pnpm test:e2e --headed`).
@@ -46,12 +46,12 @@ const { readDevEnv, startDevDatabase } = await import(pathToFileURL(devDbModule)
 
 const { databaseUrl } = await readDevEnv();
 
-/** Mesmo servidor/credenciais do DATABASE_URL, banco `kanban_e2e` (ou E2E_DATABASE_URL). */
+/** Mesmo servidor/credenciais do DATABASE_URL, banco `ronin_e2e` (ou E2E_DATABASE_URL). */
 function e2eDatabaseUrl() {
   const explicit = process.env.E2E_DATABASE_URL?.trim();
   if (explicit) return explicit;
   const url = new URL(databaseUrl);
-  url.pathname = '/kanban_e2e';
+  url.pathname = '/ronin_e2e';
   return url.toString();
 }
 

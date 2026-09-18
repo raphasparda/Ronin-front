@@ -9,7 +9,7 @@ function databaseName(url: string): string {
 /**
  * Volta o banco E2E ao estado de instância limpa: esvazia todas as tabelas do schema `public`
  * (as migrations, no schema `drizzle`, ficam). Só aceita bancos com "e2e" no nome, para nunca
- * apagar o banco de desenvolvimento (`kanban`) por engano.
+ * apagar o banco de desenvolvimento (`ronin`) por engano.
  */
 export async function resetDatabase(): Promise<void> {
   const name = databaseName(E2E_DATABASE_URL);

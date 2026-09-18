@@ -42,12 +42,12 @@ Variáveis opcionais deste repositório: [`.env.example`](../../.env.example). N
 `e2e/run.mjs`:
 
 1. localiza o ronin-api (`RONIN_API_DIR`) e confere que ele tem `node_modules`;
-2. usa `scripts/dev-db/postgres.mjs` **do ronin-api** para subir (ou reaproveitar) o PostgreSQL local de lá (dados em `ronin-api/.data`) e criar o banco isolado `kanban_e2e` no servidor do `DATABASE_URL` (ambiente ou `.env` do ronin-api);
+2. usa `scripts/dev-db/postgres.mjs` **do ronin-api** para subir (ou reaproveitar) o PostgreSQL local de lá (dados em `ronin-api/.data`) e criar o banco isolado `ronin_e2e` no servidor do `DATABASE_URL` (ambiente ou `.env` do ronin-api);
 3. aplica as migrations nesse banco (`pnpm run db:migrate` no ronin-api);
 4. roda o Playwright, cujo `webServer` sobe a API do ronin-api (`pnpm exec tsx src/server.ts`, porta 3100) e o Vite deste repositório (porta 5320);
 5. para o PostgreSQL se foi ele que o subiu.
 
-Os bancos `kanban` (dev) e `kanban_test` (Vitest da API) nunca são tocados; dá para rodar com o `pnpm dev` aberto. Argumentos extras vão para o Playwright: `pnpm test:e2e --project=desktop`, `pnpm test:e2e --headed`.
+Os bancos `kanban` (dev) e `ronin_test` (Vitest da API) nunca são tocados; dá para rodar com o `pnpm dev` aberto. Argumentos extras vão para o Playwright: `pnpm test:e2e --project=desktop`, `pnpm test:e2e --headed`.
 
 Na primeira vez: `pnpm exec playwright install chromium`.
 

@@ -2,7 +2,7 @@
 (function () {
   var theme = 'light';
   try {
-    if (window.localStorage.getItem('kanban.theme') === 'dark') theme = 'dark';
+    if (window.localStorage.getItem('ronin.theme') === 'dark') theme = 'dark';
   } catch {
     // Armazenamento bloqueado: fica no tema claro.
   }

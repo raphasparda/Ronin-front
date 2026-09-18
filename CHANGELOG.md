@@ -2,11 +2,18 @@
 
 Todas as mudanças relevantes do Ronin ficam registradas aqui.
 
-O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). O projeto ainda não tem versão publicada: tudo abaixo está em "Unreleased" (não lançado) até o deploy da Fatia 10.
+O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o versionamento semântico. A 0.9.0 fecha o MVP (Fatias 0 a 9) e a Fatia 11, já em produção no Render; a 1.0.0 será a versão em VPS própria (Fatia 10).
 
 ## [Unreleased]
 
-Entrega das Fatias 0 a 9 do MVP, na branch `feat/mvp-fatias-2-9`. A Fatia 10 (produção em VPS, backup e revisão final) ainda está pendente: veja [`docs/ops/known-issues.md`](docs/ops/known-issues.md).
+### Alterado
+
+- O Ronin passa a ser um hub de ferramentas, e o Kanban é a primeira. As telas foram separadas em `src/features/platform` (login, convites, perfil, administração, notificações) e `src/features/tools/kanban` (quadros, cards, Meus cards), sem mudança de comportamento.
+- Nome interno `kanban` trocado por `ronin`: pacote `@ronin/web`, header CSRF `X-Ronin-Csrf` e chave do tema `ronin.theme` no navegador (a preferência de tema volta ao padrão uma vez). Precisa da API na versão que aceita o header novo.
+
+## [0.9.0] - 2026-09-18
+
+Entrega das Fatias 0 a 9 do MVP e da Fatia 11. A Fatia 10 (produção em VPS, backup e revisão final) ainda está pendente: veja [`docs/ops/known-issues.md`](docs/ops/known-issues.md).
 
 ### Foto de perfil
 
@@ -16,7 +23,7 @@ Entrega das Fatias 0 a 9 do MVP, na branch `feat/mvp-fatias-2-9`. A Fatia 10 (pr
 
 - Monorepo dividido em dois repositórios, com histórico preservado: **ronin-web** (este, `raphasparda/Ronin-front`: SPA na raiz, E2E em `e2e/`, docs de design) e **ronin-api** (`raphasparda/Ronin-End`: API, `@raphasparda/ronin-shared` (antes `@kanban/shared`), banco local de dev, docs de produto, arquitetura e operação; ADR 0014 de lá). As entradas abaixo são do monorepo e incluem itens da API.
 - `@raphasparda/ronin-shared` ligado por `link:../ronin-api/packages/shared` (ou pela versão publicada no GitHub Packages); fixtures de teste pelo subpath `@raphasparda/ronin-shared/test-fixtures`.
-- `pnpm test:e2e` sobe a API a partir do ronin-api (`RONIN_API_DIR`, padrão `../ronin-api`), mantendo o banco isolado `kanban_e2e` e as portas 3100/5320.
+- `pnpm test:e2e` sobe a API a partir do ronin-api (`RONIN_API_DIR`, padrão `../ronin-api`), mantendo o banco isolado `ronin_e2e` e as portas 3100/5320.
 - CI faz checkout de `raphasparda/Ronin-End` (variável opcional `RONIN_API_REPOSITORY`, segredo `RONIN_API_TOKEN` se privado).
 
 ### Adicionado
@@ -82,7 +89,7 @@ Entrega das Fatias 0 a 9 do MVP, na branch `feat/mvp-fatias-2-9`. A Fatia 10 (pr
 #### Testes e CI
 
 - Testes de integração da API contra PostgreSQL real, testes de componentes com MSW e testes de domínio.
-- E2E com Playwright e checagem de acessibilidade com axe, em banco isolado `kanban_e2e`, cobrindo os fluxos das Fatias 1 a 9 (inclusive dois usuários).
+- E2E com Playwright e checagem de acessibilidade com axe, em banco isolado `ronin_e2e`, cobrindo os fluxos das Fatias 1 a 9 (inclusive dois usuários).
 - Workflow do GitHub Actions com lint, typecheck, testes, build e E2E ([`docs/ops/ci.md`](docs/ops/ci.md)).
 
 ### Segurança

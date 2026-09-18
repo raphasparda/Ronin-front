@@ -16,7 +16,7 @@ ronin-api/   raphasparda/Ronin-End: fonte do @raphasparda/ronin-shared (link:) e
 | Job      | Passos                                                                                                                                                                                                                                                         | Tempo esperado |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | `checks` | checkout dos dois → pnpm (`packageManager` do web) → Node do `.nvmrc` com cache dos dois lockfiles → `pnpm install --frozen-lockfile` no ronin-api e no ronin-web → `pnpm lint` → `pnpm typecheck` → `pnpm test` → `pnpm build`                                | ~5 min         |
-| `e2e`    | só roda se `checks` passar; mesmo preparo + serviço `postgres:18-alpine` → cria `kanban_e2e` → `playwright install --with-deps chromium` → `pnpm test:e2e`; em falha publica `ronin-web/playwright-report` e `ronin-web/test-results` como artefato por 7 dias | ~10 min        |
+| `e2e`    | só roda se `checks` passar; mesmo preparo + serviço `postgres:18-alpine` → cria `ronin_e2e` → `playwright install --with-deps chromium` → `pnpm test:e2e`; em falha publica `ronin-web/playwright-report` e `ronin-web/test-results` como artefato por 7 dias | ~10 min        |
 
 Para bloquear merge: em _Settings → Branches → Branch protection rules_ (ou _Rulesets_) da `main`, exigir os checks **Lint, typecheck, testes e build** e **E2E (Playwright)**.
 
@@ -40,8 +40,8 @@ O CI **nunca** sobe o PostgreSQL embutido do ronin-api: `DEV_DB_EXTERNAL_ONLY=tr
 | ---------------------- | ---------------------------------------------------- | --------------------------------------------------------------- |
 | `RONIN_API_DIR`        | `$GITHUB_WORKSPACE/ronin-api`                        | `e2e/run.mjs`, `playwright.config.ts`, `vite.config.ts`         |
 | `DEV_DB_EXTERNAL_ONLY` | `true`                                               | `postgres.mjs` do ronin-api                                     |
-| `DATABASE_URL`         | `postgres://kanban:kanban@127.0.0.1:5432/kanban`     | `e2e/run.mjs` (servidor/credenciais base)                       |
-| `E2E_DATABASE_URL`     | `postgres://kanban:kanban@127.0.0.1:5432/kanban_e2e` | `e2e/run.mjs` e API no Playwright                               |
+| `DATABASE_URL`         | `postgres://ronin:ronin@127.0.0.1:5432/ronin`     | `e2e/run.mjs` (servidor/credenciais base)                       |
+| `E2E_DATABASE_URL`     | `postgres://ronin:ronin@127.0.0.1:5432/ronin_e2e` | `e2e/run.mjs` e API no Playwright                               |
 | `APP_ORIGIN`           | `http://127.0.0.1:5310`                              | validação de env da API (os E2E sobrescrevem com a origem 5320) |
 | `LOG_LEVEL`            | `warn`                                               | API                                                             |
 
@@ -63,7 +63,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm test:e2e      # usa o Postgres local do ronin-api (5433) e o banco kanban_e2e
+pnpm test:e2e      # usa o Postgres local do ronin-api (5433) e o banco ronin_e2e
 ```
 
 Validar o YAML sem push: [actionlint](https://github.com/rhysd/actionlint/releases) (`actionlint .github/workflows/ci.yml`).

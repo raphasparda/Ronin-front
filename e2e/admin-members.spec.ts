@@ -9,7 +9,7 @@ import { toast } from './support/ui';
 const BRUNO_EMAIL = 'bruno.convidado@exemplo.com';
 const BRUNO_PASSWORD = 'senha-do-bruno-123';
 const BRUNO_NEW_PASSWORD = 'nova-senha-do-bruno-456';
-const CSRF = { origin: WEB_ORIGIN, 'x-kanban-csrf': '1' };
+const CSRF = { origin: WEB_ORIGIN, 'x-ronin-csrf': '1' };
 
 async function login(page: Page, email: string, password: string): Promise<void> {
   await page.getByLabel('E-mail').fill(email);

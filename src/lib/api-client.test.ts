@@ -29,7 +29,7 @@ describe('apiRequest', () => {
     const result = await api.post('/api/boards', { name: 'Sprint' }, { schema });
 
     expect(result).toEqual({ id: 'b1', name: 'Sprint' });
-    expect(captured?.headers.get('X-Kanban-Csrf')).toBe('1');
+    expect(captured?.headers.get('X-Ronin-Csrf')).toBe('1');
     expect(captured?.headers.get('Content-Type')).toBe('application/json');
     expect(captured?.credentials).toBe('same-origin');
     expect(await captured?.json()).toEqual({ name: 'Sprint' });
@@ -46,7 +46,7 @@ describe('apiRequest', () => {
 
     await api.get('/api/auth/me');
 
-    expect(captured?.headers.get('X-Kanban-Csrf')).toBe('1');
+    expect(captured?.headers.get('X-Ronin-Csrf')).toBe('1');
     expect(captured?.headers.get('Content-Type')).toBeNull();
   });
 

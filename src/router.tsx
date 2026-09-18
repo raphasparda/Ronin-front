@@ -1,9 +1,9 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 
 import { AppLayout } from './components/layout/AppLayout';
-import { LoginPage } from './features/auth/LoginPage';
-import { RequireAuth, type LoginLocationState } from './features/auth/RequireAuth';
-import { NotFoundPage } from './features/home/NotFoundPage';
+import { LoginPage } from './features/platform/auth/LoginPage';
+import { RequireAuth, type LoginLocationState } from './features/platform/auth/RequireAuth';
+import { NotFoundPage } from './features/platform/home/NotFoundPage';
 import { installPageTransitions } from './lib/page-transitions';
 import { loginPath } from './lib/safe-next';
 
@@ -11,7 +11,9 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
   ? [
       {
         path: 'dev/paleta',
-        lazy: async () => ({ Component: (await import('./features/dev/PalettePage')).PalettePage }),
+        lazy: async () => ({
+          Component: (await import('./features/platform/dev/PalettePage')).PalettePage,
+        }),
       },
     ]
   : [];
@@ -24,16 +26,20 @@ export const routes: RouteObject[] = [
   { path: '/login', Component: LoginPage },
   {
     path: '/setup',
-    lazy: async () => ({ Component: (await import('./features/auth/SetupPage')).SetupPage }),
+    lazy: async () => ({
+      Component: (await import('./features/platform/auth/SetupPage')).SetupPage,
+    }),
   },
   {
     path: '/convite',
-    lazy: async () => ({ Component: (await import('./features/auth/InvitePage')).InvitePage }),
+    lazy: async () => ({
+      Component: (await import('./features/platform/auth/InvitePage')).InvitePage,
+    }),
   },
   {
     path: '/redefinir-senha',
     lazy: async () => ({
-      Component: (await import('./features/auth/ResetPasswordPage')).ResetPasswordPage,
+      Component: (await import('./features/platform/auth/ResetPasswordPage')).ResetPasswordPage,
     }),
   },
   {
@@ -46,25 +52,27 @@ export const routes: RouteObject[] = [
           {
             index: true,
             lazy: async () => ({
-              Component: (await import('./features/boards/BoardsPage')).BoardsPage,
+              Component: (await import('./features/tools/kanban/boards/BoardsPage')).BoardsPage,
             }),
           },
           {
             path: 'quadros/arquivados',
             lazy: async () => ({
-              Component: (await import('./features/boards/ArchivedBoardsPage')).ArchivedBoardsPage,
+              Component: (await import('./features/tools/kanban/boards/ArchivedBoardsPage'))
+                .ArchivedBoardsPage,
             }),
           },
           {
             path: 'b/:boardId',
             lazy: async () => ({
-              Component: (await import('./features/boards/BoardPage')).BoardPage,
+              Component: (await import('./features/tools/kanban/boards/BoardPage')).BoardPage,
             }),
             children: [
               {
                 path: 'c/:cardId',
                 lazy: async () => ({
-                  Component: (await import('./features/cards/CardDetailRoute')).CardDetailRoute,
+                  Component: (await import('./features/tools/kanban/cards/CardDetailRoute'))
+                    .CardDetailRoute,
                 }),
               },
             ],
@@ -72,38 +80,39 @@ export const routes: RouteObject[] = [
           {
             path: 'meus-cards',
             lazy: async () => ({
-              Component: (await import('./features/my-cards/MyCardsPage')).MyCardsPage,
+              Component: (await import('./features/tools/kanban/my-cards/MyCardsPage')).MyCardsPage,
             }),
           },
           {
             path: 'perfil',
             lazy: async () => ({
-              Component: (await import('./features/profile/ProfilePage')).ProfilePage,
+              Component: (await import('./features/platform/profile/ProfilePage')).ProfilePage,
             }),
           },
           {
             path: 'admin',
             lazy: async () => ({
-              Component: (await import('./features/admin/AdminLayout')).AdminLayout,
+              Component: (await import('./features/platform/admin/AdminLayout')).AdminLayout,
             }),
             children: [
               { index: true, element: <Navigate to="/admin/membros" replace /> },
               {
                 path: 'membros',
                 lazy: async () => ({
-                  Component: (await import('./features/admin/MembersPage')).MembersPage,
+                  Component: (await import('./features/platform/admin/MembersPage')).MembersPage,
                 }),
               },
               {
                 path: 'convites',
                 lazy: async () => ({
-                  Component: (await import('./features/admin/InvitesPage')).InvitesPage,
+                  Component: (await import('./features/platform/admin/InvitesPage')).InvitesPage,
                 }),
               },
               {
                 path: 'workspace',
                 lazy: async () => ({
-                  Component: (await import('./features/admin/WorkspacePage')).WorkspacePage,
+                  Component: (await import('./features/platform/admin/WorkspacePage'))
+                    .WorkspacePage,
                 }),
               },
             ],

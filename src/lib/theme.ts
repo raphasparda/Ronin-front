@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 export type Theme = 'light' | 'dark';
 
 /** Mesma chave lida por `public/theme-init.js`. */
-export const THEME_STORAGE_KEY = 'kanban.theme';
+export const THEME_STORAGE_KEY = 'ronin.theme';
 
 const listeners = new Set<() => void>();
 

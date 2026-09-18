@@ -9,8 +9,8 @@ export const ADMIN = {
   password: 'senha-muito-segura-e2e',
 } as const;
 
-/** Headers que passam no CSRF da API (Origin = APP_ORIGIN + X-Kanban-Csrf). */
-export const csrfHeaders = { origin: WEB_ORIGIN, 'x-kanban-csrf': '1' } as const;
+/** Headers que passam no CSRF da API (Origin = APP_ORIGIN + X-Ronin-Csrf). */
+export const csrfHeaders = { origin: WEB_ORIGIN, 'x-ronin-csrf': '1' } as const;
 
 /**
  * Setup inicial direto pela API (via proxy do Vite), para testes que só precisam de alguém

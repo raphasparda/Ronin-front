@@ -4,7 +4,7 @@ import { expect, type Page } from '@playwright/test';
 export type Theme = 'light' | 'dark';
 
 /** Mesma chave de `src/lib/theme.ts` e `public/theme-init.js`. */
-export const THEME_STORAGE_KEY = 'kanban.theme';
+export const THEME_STORAGE_KEY = 'ronin.theme';
 
 /** Grava o tema no localStorage antes de qualquer script da página rodar. */
 export async function presetTheme(page: Page, theme: Theme): Promise<void> {

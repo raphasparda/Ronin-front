@@ -100,8 +100,8 @@ jobs:
       # Nunca subir o PostgreSQL embutido do ronin-api: o CI usa só o serviço abaixo.
       DEV_DB_EXTERNAL_ONLY: 'true'
       # Serviço postgres:18-alpine publicado na 5432 do runner. Credenciais descartáveis, só do CI.
-      DATABASE_URL: postgres://kanban:kanban@127.0.0.1:5432/kanban
-      E2E_DATABASE_URL: postgres://kanban:kanban@127.0.0.1:5432/kanban_e2e
+      DATABASE_URL: postgres://ronin:ronin@127.0.0.1:5432/ronin
+      E2E_DATABASE_URL: postgres://ronin:ronin@127.0.0.1:5432/ronin_e2e
       APP_ORIGIN: http://127.0.0.1:5310
       LOG_LEVEL: warn
 
@@ -109,13 +109,13 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_USER: kanban
-          POSTGRES_PASSWORD: kanban
-          POSTGRES_DB: kanban
+          POSTGRES_USER: ronin
+          POSTGRES_PASSWORD: ronin
+          POSTGRES_DB: ronin
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U kanban -d kanban"
+          --health-cmd "pg_isready -U ronin -d ronin"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
@@ -150,8 +150,8 @@ jobs:
             ronin-web/pnpm-lock.yaml
             ronin-api/pnpm-lock.yaml
 
-      - name: Criar banco E2E (kanban_e2e)
-        run: docker exec "${{ job.services.postgres.id }}" psql -U kanban -d kanban -v ON_ERROR_STOP=1 -c "CREATE DATABASE kanban_e2e OWNER kanban"
+      - name: Criar banco E2E (ronin_e2e)
+        run: docker exec "${{ job.services.postgres.id }}" psql -U ronin -d ronin -v ON_ERROR_STOP=1 -c "CREATE DATABASE ronin_e2e OWNER ronin"
 
       - name: Instalar dependências (ronin-api)
         working-directory: ronin-api
@@ -163,7 +163,7 @@ jobs:
       - name: Instalar Chromium do Playwright
         run: pnpm exec playwright install --with-deps chromium
 
-      # e2e/run.mjs aplica as migrations do ronin-api em kanban_e2e e roda o Playwright
+      # e2e/run.mjs aplica as migrations do ronin-api em ronin_e2e e roda o Playwright
       # (API do ronin-api na 3100, web na 5320).
       - name: E2E
         run: pnpm test:e2e

@@ -10,4 +10,4 @@ export const WEB_ORIGIN = `http://127.0.0.1:${WEB_PORT}`;
 
 /** Definido pelo `e2e/run.mjs`; o padrão casa com o PostgreSQL local de dev (porta 5433). */
 export const E2E_DATABASE_URL =
-  process.env.E2E_DATABASE_URL?.trim() || 'postgres://kanban:kanban@127.0.0.1:5433/kanban_e2e';
+  process.env.E2E_DATABASE_URL?.trim() || 'postgres://ronin:ronin@127.0.0.1:5433/ronin_e2e';

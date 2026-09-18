@@ -431,12 +431,12 @@ A sombra nunca é o único separador. Cards e popovers têm também borda `borde
 ```js
 (function () {
   var t = null;
-  try { t = localStorage.getItem("kanban.theme"); } catch (e) {}
+  try { t = localStorage.getItem("ronin.theme"); } catch (e) {}
   document.documentElement.setAttribute("data-theme", t === "dark" ? "dark" : "light");
 })();
 ```
 
-- O `ThemeSwitch` do cabeçalho grava `localStorage["kanban.theme"]` e troca o atributo na hora, sem recarregar.
+- O `ThemeSwitch` do cabeçalho grava `localStorage["ronin.theme"]` e troca o atributo na hora, sem recarregar.
 
 ### 7.2 Proteção contra regressão (CI)
 

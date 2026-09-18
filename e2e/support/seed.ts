@@ -16,7 +16,7 @@ const SEED_PASSWORD_HASH =
   '$argon2id$v=19$m=19456,t=2,p=1$sGqbvjmvshDE3U7fO+v62A$Xpelzzoim+Zuy+WcPUSzXytAXqJta+HmQCS51/emDuU';
 
 /** Cookie de sessão fora de produção (ronin-api: src/plugins/session.ts). */
-export const SESSION_COOKIE = 'kanban_sid';
+export const SESSION_COOKIE = 'ronin_sid';
 
 export const WORKSPACE = { name: 'Equipe E2E', timezone: 'America/Sao_Paulo' } as const;
 

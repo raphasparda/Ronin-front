@@ -4,7 +4,7 @@ import { resolveApiDir } from '../scripts/ronin-api-dir.mjs';
 import { API_ORIGIN, API_PORT, E2E_DATABASE_URL, WEB_ORIGIN, WEB_PORT } from './support/env';
 
 /**
- * E2E do Ronin. Rode com `pnpm test:e2e`: o `e2e/run.mjs` prepara o banco `kanban_e2e` (com o
+ * E2E do Ronin. Rode com `pnpm test:e2e`: o `e2e/run.mjs` prepara o banco `ronin_e2e` (com o
  * PostgreSQL local do ronin-api) e chama este config. A API sobe do repositório irmão ronin-api
  * (RONIN_API_DIR, padrão ../ronin-api). Os testes compartilham um único banco real e o truncam,
  * por isso rodam em série (1 worker).

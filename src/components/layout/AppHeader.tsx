@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router';
 
-import { useSessionUser } from '../../features/auth/auth-api';
-import { UserMenu } from '../../features/auth/UserMenu';
-import { NotificationsMenu } from '../../features/notifications/NotificationsMenu';
+import { useSessionUser } from '../../features/platform/auth/auth-api';
+import { UserMenu } from '../../features/platform/auth/UserMenu';
+import { NotificationsMenu } from '../../features/platform/notifications/NotificationsMenu';
 import { ThemeSwitch } from '../ui/ThemeSwitch';
 import { Logo } from './Logo';
 import { isBoardsSection, isMyCardsSection } from './nav-sections';

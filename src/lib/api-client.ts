@@ -1,7 +1,7 @@
 import { errorResponseSchema, type ErrorCode, type ErrorDetail } from '@raphasparda/ronin-shared';
 import type { z } from 'zod';
 
-export const CSRF_HEADER = 'X-Kanban-Csrf';
+export const CSRF_HEADER = 'X-Ronin-Csrf';
 
 const GENERIC_ERROR_MESSAGE = 'Algo deu errado. Tente de novo.';
 const NETWORK_ERROR_MESSAGE = 'Sem conexão com o servidor.';
