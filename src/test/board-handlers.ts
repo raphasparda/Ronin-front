@@ -297,7 +297,13 @@ export const mockActor = { id: sessionFixture.user.id, role: 'admin' as 'admin' 
 /** Sessão do Member Bruno Lima (sem acesso implícito a quadro restrito). */
 export const memberSession: AuthSessionResponse = {
   ...sessionFixture,
-  user: { id: MEMBER_ID, name: 'Bruno Lima', email: 'bruno@empresa.com', role: 'member' },
+  user: {
+    id: MEMBER_ID,
+    name: 'Bruno Lima',
+    email: 'bruno@empresa.com',
+    role: 'member',
+    avatarUpdatedAt: null,
+  },
 };
 
 /** Faz o mock responder como o Member Bruno Lima (use junto com `authHandlers.me(memberSession)`). */

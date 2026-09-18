@@ -1,7 +1,8 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { ColorSwatch } from './ColorSwatch';
 import { Input } from './Input';
@@ -23,6 +24,31 @@ describe('PriorityBadge', () => {
     const { container } = render(<PriorityBadge priority={null} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('Avatar', () => {
+  const ID = '0f5b8f5e-6d0c-4f8e-9a51-6a7f2a6f1c11';
+
+  it('sem foto: iniciais e cor estável pelo id', () => {
+    const { container } = render(<Avatar id={ID} name="Ana Souza" />);
+
+    expect(screen.getByText('AS')).toBeInTheDocument();
+    expect(container.querySelector('[data-color]')).toHaveAttribute('data-color');
+  });
+
+  it('com foto: imagem versionada que volta às iniciais se não carregar', () => {
+    const { container } = render(
+      <Avatar id={ID} name="Ana Souza" avatarUpdatedAt="2026-09-17T10:00:00.000Z" />,
+    );
+
+    const image = container.querySelector('img');
+    expect(image).toHaveAttribute('src', `/api/users/${ID}/avatar?v=2026-09-17T10%3A00%3A00.000Z`);
+
+    fireEvent.error(image as HTMLImageElement);
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('AS')).toBeInTheDocument();
   });
 });
 

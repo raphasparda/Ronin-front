@@ -1,11 +1,29 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { getToasts } from '../../components/ui/toast-store';
-import { CURRENT_PASSWORD, requestsTo } from '../../test/admin-handlers';
+import type * as avatarFile from '../../lib/avatar-file';
+import { AvatarFileError } from '../../lib/avatar-file';
+import { AVATAR_UPDATED_AT, CURRENT_PASSWORD, requestsTo } from '../../test/admin-handlers';
 import { sessionFixture } from '../../test/auth-handlers';
 import { renderApp } from '../../test/render';
+
+// O recorte usa canvas, que o jsdom não tem: `prepareAvatar` é testado em `lib/avatar-file.test.ts`.
+const prepareAvatar = vi.hoisted(() => vi.fn());
+vi.mock('../../lib/avatar-file', async (importOriginal) => ({
+  ...(await importOriginal<typeof avatarFile>()),
+  prepareAvatar,
+}));
+
+const AVATAR_BODY = { contentType: 'image/webp', data: 'UklGRg==' };
+const pickFile = async (user: ReturnType<typeof userEvent.setup>) => {
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+  expect(input).not.toBeNull();
+  await user.upload(input as HTMLInputElement, new File(['x'], 'foto.png', { type: 'image/png' }));
+};
+
+const avatarImage = () => document.querySelector<HTMLImageElement>('img[src*="/avatar"]');
 
 const toastMessages = () => getToasts().map((item) => item.message);
 
@@ -39,6 +57,44 @@ describe('/perfil', () => {
     ).toBeInTheDocument();
     expect(toastMessages()).toContain('Nome atualizado.');
     expect(requestsTo('me')[0]?.body).toEqual({ name: 'Ana Paula' });
+  });
+
+  it('envia a foto, mostra no perfil e no cabeçalho, e depois remove', async () => {
+    prepareAvatar.mockResolvedValue(AVATAR_BODY);
+    const user = userEvent.setup();
+    renderApp('/perfil');
+
+    expect(await screen.findByRole('button', { name: 'Enviar foto' })).toBeVisible();
+    expect(avatarImage()).toBeNull();
+
+    await pickFile(user);
+
+    await waitFor(() => expect(toastMessages()).toContain('Foto atualizada.'));
+    expect(requestsTo('me/avatar')[0]).toMatchObject({ method: 'PUT', body: AVATAR_BODY });
+    // A URL carrega a versão devolvida pela API (cache).
+    expect(avatarImage()?.getAttribute('src')).toBe(
+      `/api/users/${sessionFixture.user.id}/avatar?v=${encodeURIComponent(AVATAR_UPDATED_AT)}`,
+    );
+    expect(await screen.findByRole('button', { name: 'Trocar foto' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Remover' }));
+
+    await waitFor(() => expect(toastMessages()).toContain('Foto removida.'));
+    expect(requestsTo('me/avatar')[1]).toMatchObject({ method: 'DELETE' });
+    expect(avatarImage()).toBeNull();
+    expect(screen.getByRole('button', { name: 'Enviar foto' })).toBeVisible();
+  });
+
+  it('arquivo que não dá para usar mostra o motivo e não chama a API', async () => {
+    prepareAvatar.mockRejectedValue(new AvatarFileError('Escolha um arquivo de imagem.'));
+    const user = userEvent.setup();
+    renderApp('/perfil');
+
+    await screen.findByRole('button', { name: 'Enviar foto' });
+    await pickFile(user);
+
+    expect(await screen.findByText('Escolha um arquivo de imagem.')).toBeVisible();
+    expect(requestsTo('me/avatar')).toEqual([]);
   });
 
   it('senha atual errada aparece no campo', async () => {

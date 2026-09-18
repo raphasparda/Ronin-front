@@ -157,7 +157,12 @@ export function CardAssigneesField({ card, readOnly, announce }: FieldProps) {
             const name = nameOf(id);
             return (
               <li key={id} className="flex min-h-8 items-center gap-2">
-                <Avatar id={id} name={user?.anonymized ? '?' : name} size="sm" />
+                <Avatar
+                  id={id}
+                  name={user?.anonymized ? '?' : name}
+                  avatarUpdatedAt={user?.avatarUpdatedAt}
+                  size="sm"
+                />
                 <span className="min-w-0 flex-1 truncate">
                   {name}
                   {user?.status === 'deactivated' && !user.anonymized && (
@@ -220,7 +225,12 @@ export function CardAssigneesField({ card, readOnly, announce }: FieldProps) {
                             onChange={() => toggle(user.id, !assigned)}
                             className="size-4 shrink-0 accent-(--color-accent)"
                           />
-                          <Avatar id={user.id} name={user.name} size="sm" />
+                          <Avatar
+                            id={user.id}
+                            name={user.name}
+                            avatarUpdatedAt={user.avatarUpdatedAt}
+                            size="sm"
+                          />
                           <span className="min-w-0 truncate">
                             {user.name}
                             {user.id === me?.id && <span className="text-muted"> (eu)</span>}

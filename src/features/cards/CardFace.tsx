@@ -97,7 +97,11 @@ function FaceContent({
 }) {
   const labels = card.labelIds.flatMap((id) => data.labelsById.get(id) ?? []);
   const hiddenLabels = labels.slice(MAX_LABELS);
-  const people = card.assigneeIds.map((id) => ({ id, name: displayName(data.usersById.get(id)) }));
+  const people = card.assigneeIds.map((id) => ({
+    id,
+    name: displayName(data.usersById.get(id)),
+    avatarUpdatedAt: data.usersById.get(id)?.avatarUpdatedAt ?? null,
+  }));
   const hiddenPeople = people.slice(MAX_AVATARS);
   const { done, total } = card.checklist;
   const hasPills = card.priority !== null || due !== null;
@@ -150,6 +154,7 @@ function FaceContent({
                   key={person.id}
                   id={person.id}
                   name={person.name}
+                  avatarUpdatedAt={person.avatarUpdatedAt}
                   size="sm"
                   className="ring-2 ring-surface"
                 />

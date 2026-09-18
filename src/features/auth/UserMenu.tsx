@@ -15,12 +15,12 @@ export function UserMenu() {
   return (
     <Menu
       label={`Menu da conta de ${user.name}`}
-      trigger={<Avatar id={user.id} name={user.name} />}
+      trigger={<Avatar id={user.id} name={user.name} avatarUpdatedAt={user.avatarUpdatedAt} />}
       triggerClassName="inline-flex size-10 items-center justify-center rounded-full hover:bg-hover md:size-9"
       header={
         <>
           <div className="flex items-center gap-2.5 px-2.5 py-2">
-            <Avatar id={user.id} name={user.name} />
+            <Avatar id={user.id} name={user.name} avatarUpdatedAt={user.avatarUpdatedAt} />
             <div className="min-w-0">
               <p className="truncate font-semibold text-text">{user.name}</p>
               <p className="truncate text-xs text-muted">{user.email}</p>

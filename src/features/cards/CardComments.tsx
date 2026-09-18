@@ -167,7 +167,11 @@ function CommentItem({ comment, cardId, boardId, readOnly }: CommentItemProps) {
   return (
     <li>
       <article aria-labelledby={headingId} className="flex gap-3">
-        <Avatar id={comment.authorId} name={author?.anonymized ? '?' : name} />
+        <Avatar
+          id={comment.authorId}
+          name={author?.anonymized ? '?' : name}
+          avatarUpdatedAt={author?.avatarUpdatedAt}
+        />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p id={headingId} className="flex flex-wrap items-baseline gap-x-2">
             <span className="font-semibold">{name}</span>{' '}

@@ -211,7 +211,7 @@ A sombra nunca é o único separador. Cards e popovers têm também borda `borde
 | `DuePill` | `Pill` com `data-status` (scheduled, due-soon, overdue, done): ícone + texto (seção 7.3 de `screens.md`). | O texto contém o estado. |
 | `PrioritySelect` | Botão que mostra a `PriorityPill` atual ou "Sem prioridade" (`text-muted`) + chevron. Abre um listbox com Urgente, Alta, Média, Baixa (pílulas), divisória e "Sem prioridade". | `aria-haspopup="listbox"`. Setas, Enter, Esc. Rótulo "Prioridade". |
 | `ColorSwatchPicker` | Grade de 9 círculos de 28px `rounded-full` com `var(--palette-<cor>-bg)` e borda `-border`. Selecionado: anel de 2px `text` com offset de 2px + check em `-fg`. | `role="radiogroup"`, `aria-label` por cor ("Azul"), setas. |
-| `Avatar` | `rounded-full`, 24/32px, iniciais 600. `data-color` derivado do id do usuário (hash módulo 9). Desativado: `gray` + borda tracejada. Anonimizado: "?". | `aria-label` com o nome. |
+| `Avatar` | `rounded-full`, 24/32px. Com foto: `<img>` de `/api/users/:id/avatar?v=<avatarUpdatedAt>` com `object-cover` (imagem que não carrega cai nas iniciais). Sem foto: iniciais 600 com `data-color` derivado do id do usuário (hash módulo 9). Desativado: `gray` + borda tracejada. Anonimizado: "?". | Decorativo (`alt=""`/`aria-hidden`): o nome acessível vem de quem contém o avatar. |
 | `Menu` / `Popover` | `bg-surface border border-border rounded-lg shadow-md`, itens de 32px `rounded-md`. Destrutivo em `text-danger`. | Padrão ARIA menu button. |
 | `Dialog` / `Sheet` | `bg-surface rounded-xl shadow-lg` sobre `bg-overlay`. Tela cheia sem raio abaixo de 640px. | Foco preso, Esc, retorno do foco. |
 | `Tabs` | Inativa `text-muted`. Ativa `text-text` 600 com barra de 3px `bg-accent`. | Padrão ARIA tabs. |

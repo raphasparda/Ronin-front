@@ -1,4 +1,5 @@
 import {
+  AVATAR_ACCEPT,
   changePasswordRequestSchema,
   isPasswordSameAsEmail,
   PASSWORD_SAME_AS_EMAIL_MESSAGE,
@@ -7,8 +8,8 @@ import {
   type SessionUser,
   type UpdateMeRequest,
 } from '@raphasparda/ronin-shared';
-import { LogOut } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { ImageUp, LogOut, Trash2 } from 'lucide-react';
+import { useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 
@@ -21,13 +22,16 @@ import { toast } from '../../components/ui/toast-store';
 import { isApiError } from '../../lib/api-client';
 import { serverMessage } from '../../lib/api-errors';
 import { schemaResolver, splitErrorDetails, type FieldMessages } from '../../lib/form-errors';
+import { AvatarFileError, AVATAR_UNREADABLE_MESSAGE, prepareAvatar } from '../../lib/avatar-file';
 import { MESSAGES } from '../../lib/query-client';
 import { useSessionUser } from '../auth/auth-api';
 import { useSignOut } from '../auth/use-sign-out';
-import { useChangePassword, useUpdateMe } from './me-api';
+import { useChangePassword, useRemoveAvatar, useUpdateAvatar, useUpdateMe } from './me-api';
 
 export const PROFILE_MESSAGES = {
   nameSaved: 'Nome atualizado.',
+  photoSaved: 'Foto atualizada.',
+  photoRemoved: 'Foto removida.',
   passwordChanged: 'Senha alterada. Você saiu dos outros dispositivos.',
   passwordIncorrect: 'A senha atual está incorreta.',
 } as const;
@@ -116,6 +120,105 @@ function NameForm({ user }: { user: SessionUser }) {
         Salvar nome
       </Button>
     </form>
+  );
+}
+
+/**
+ * Foto de perfil (screens §9.1). O arquivo é recortado e comprimido no navegador
+ * (`prepareAvatar`) e enviado na hora: sem etapa de confirmação.
+ */
+function PhotoField({ user }: { user: SessionUser }) {
+  const updateAvatar = useUpdateAvatar();
+  const removeAvatar = useRemoveAvatar();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const hasPhoto = user.avatarUpdatedAt !== null;
+  const sending = preparing || updateAvatar.isPending;
+  const busy = sending || removeAvatar.isPending;
+
+  const onPick = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Zera o input: escolher o mesmo arquivo de novo tem que disparar outro `change`.
+    event.target.value = '';
+    if (!file) return;
+
+    setError(null);
+    setPreparing(true);
+    let body;
+    try {
+      body = await prepareAvatar(file);
+    } catch (failure) {
+      setError(failure instanceof AvatarFileError ? failure.message : AVATAR_UNREADABLE_MESSAGE);
+      return;
+    } finally {
+      setPreparing(false);
+    }
+
+    updateAvatar.mutate(body, {
+      onSuccess: () => toast.success(PROFILE_MESSAGES.photoSaved),
+      onError: (failure) => setError(errorFromResponse(failure)),
+    });
+  };
+
+  const onRemove = () => {
+    setError(null);
+    removeAvatar.mutate(undefined, {
+      onSuccess: () => toast.success(PROFILE_MESSAGES.photoRemoved),
+      onError: (failure) => setError(errorFromResponse(failure)),
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-4">
+        <Avatar
+          id={user.id}
+          name={user.name}
+          avatarUpdatedAt={user.avatarUpdatedAt}
+          className="size-16! text-xl!"
+        />
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <input
+              ref={inputRef}
+              type="file"
+              accept={AVATAR_ACCEPT}
+              className="hidden"
+              aria-hidden
+              tabIndex={-1}
+              onChange={(event) => void onPick(event)}
+            />
+            <Button
+              variant="secondary"
+              icon={<ImageUp size={16} />}
+              loading={sending}
+              loadingText="Enviando…"
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+            >
+              {hasPhoto ? 'Trocar foto' : 'Enviar foto'}
+            </Button>
+            {hasPhoto && (
+              <Button
+                variant="ghost"
+                icon={<Trash2 size={16} />}
+                loading={removeAvatar.isPending}
+                loadingText="Removendo…"
+                disabled={busy}
+                onClick={onRemove}
+              >
+                Remover
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted">
+            PNG, JPEG ou WebP. A imagem é recortada em quadrado pelo centro.
+          </p>
+        </div>
+      </div>
+      <FormAlert message={error} />
+    </div>
   );
 }
 
@@ -228,15 +331,13 @@ export function ProfilePage() {
       <h1 className="text-xl">Meu perfil</h1>
 
       <Section title="Dados">
-        <div className="flex items-center gap-4">
-          <Avatar id={user.id} name={user.name} className="size-16! text-xl!" />
-          <dl className="grid min-w-0 grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-            <dt className="text-muted">E-mail</dt>
-            <dd className="truncate">{user.email}</dd>
-            <dt className="text-muted">Papel</dt>
-            <dd>{ROLE_TEXT[user.role]}</dd>
-          </dl>
-        </div>
+        <PhotoField user={user} />
+        <dl className="grid min-w-0 grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <dt className="text-muted">E-mail</dt>
+          <dd className="truncate">{user.email}</dd>
+          <dt className="text-muted">Papel</dt>
+          <dd>{ROLE_TEXT[user.role]}</dd>
+        </dl>
         <NameForm key={user.name} user={user} />
       </Section>
 

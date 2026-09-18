@@ -18,6 +18,7 @@ export const sessionFixture: AuthSessionResponse = authSessionResponseSchema.par
     name: 'Ana Souza',
     email: 'ana@empresa.com',
     role: 'admin',
+    avatarUpdatedAt: null,
   },
   workspace: { name: 'Equipe Ronin', timezone: 'America/Sao_Paulo' },
   // `boardCovers` reflete a configuração do R2 na instância (ADR 0016).

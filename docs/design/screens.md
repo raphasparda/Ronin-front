@@ -699,7 +699,9 @@ Prazos e o agrupamento de Meus cards usam este fuso.
 
 ## 12. Perfil (`/perfil`)
 
-- Seção **Dados:** avatar de 64px, "Nome" (1–80) + [Salvar nome], e-mail e papel em texto. Toast: "Nome atualizado." Vazio: "Informe seu nome."
+- Seção **Dados:** avatar de 64px com [Enviar foto] (ou [Trocar foto]) e [Remover] quando já há foto; "Nome" (1–80) + [Salvar nome]; e-mail e papel em texto. Toasts: "Nome atualizado.", "Foto atualizada.", "Foto removida." Vazio: "Informe seu nome."
+  - **Foto:** seletor de arquivo PNG/JPEG/WebP, recortada em quadrado pelo centro e enviada na hora (sem etapa de confirmação); enquanto sobe, o botão mostra "Enviando…". Apoio: "PNG, JPEG ou WebP. A imagem é recortada em quadrado pelo centro."
+  - Arquivo que não dá para usar (não é imagem, ilegível, ou não comprime o bastante) vira um alerta no formulário, sem chamar a API.
 - Seção **Senha:** "Senha atual", "Nova senha" (10–256) + [Alterar senha].
   - `PASSWORD_INCORRECT`: "A senha atual está incorreta."
   - Sucesso (a sessão atual continua): "Senha alterada. Você saiu dos outros dispositivos."

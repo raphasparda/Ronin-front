@@ -91,7 +91,11 @@ function MemberRow({
   return (
     <li className="relative flex flex-col gap-3 p-4 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_9rem_8rem_2.5rem] md:items-center md:gap-4 md:py-3">
       <div className="flex min-w-0 items-center gap-2.5 pr-10 md:pr-0">
-        <Avatar id={user.id} name={user.anonymized ? '?' : displayName} />
+        <Avatar
+          id={user.id}
+          name={user.anonymized ? '?' : displayName}
+          avatarUpdatedAt={user.avatarUpdatedAt}
+        />
         <span className="truncate font-semibold">
           {displayName}
           {isSelf && <span className="font-normal text-muted"> (você)</span>}

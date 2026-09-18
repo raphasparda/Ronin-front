@@ -8,6 +8,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). O
 
 Entrega das Fatias 0 a 9 do MVP, na branch `feat/mvp-fatias-2-9`. A Fatia 10 (produção em VPS, backup e revisão final) ainda está pendente: veja [`docs/ops/known-issues.md`](docs/ops/known-issues.md).
 
+### Foto de perfil
+
+- Em **Meu perfil**, enviar, trocar e remover a foto: o arquivo (PNG, JPEG ou WebP) é recortado em quadrado pelo centro e comprimido no navegador antes de subir. A foto aparece em todos os avatares — cabeçalho, membros, responsáveis do card e comentários — e cai de volta nas iniciais quando não há foto.
+
 ### Alterado
 
 - Monorepo dividido em dois repositórios, com histórico preservado: **ronin-web** (este, `raphasparda/Ronin-front`: SPA na raiz, E2E em `e2e/`, docs de design) e **ronin-api** (`raphasparda/Ronin-End`: API, `@raphasparda/ronin-shared` (antes `@kanban/shared`), banco local de dev, docs de produto, arquitetura e operação; ADR 0014 de lá). As entradas abaixo são do monorepo e incluem itens da API.

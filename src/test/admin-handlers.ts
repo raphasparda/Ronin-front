@@ -17,6 +17,8 @@ import {
   passwordResetLookupRequestSchema,
   passwordResetLookupResponseSchema,
   updateAdminUserRequestSchema,
+  updateAvatarRequestSchema,
+  updateAvatarResponseSchema,
   updateMeRequestSchema,
   updateMeResponseSchema,
   updateWorkspaceRequestSchema,
@@ -37,6 +39,9 @@ export { TOKEN };
 export const MEMBER_ID = '5a1d2c3b-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
 export const DEACTIVATED_ID = '6b2e3d4c-5f6a-4b7c-9d8e-0f1a2b3c4d5e';
 export const ANONYMIZED_ID = '7c3f4e5d-6a7b-4c8d-8e9f-1a2b3c4d5e6f';
+
+/** Versão devolvida por `PUT /api/me/avatar` no mock. */
+export const AVATAR_UPDATED_AT = '2026-09-17T10:00:00.000Z';
 
 /** Senha atual aceita por `POST /api/me/password` no mock. */
 export const CURRENT_PASSWORD = 'senha-correta-1';
@@ -64,6 +69,7 @@ function seed(): AdminDb {
         role: 'admin',
         status: 'active',
         anonymized: false,
+        avatarUpdatedAt: null,
         createdAt: T0,
       },
       {
@@ -73,6 +79,7 @@ function seed(): AdminDb {
         role: 'member',
         status: 'active',
         anonymized: false,
+        avatarUpdatedAt: null,
         createdAt: T0,
       },
       {
@@ -82,6 +89,7 @@ function seed(): AdminDb {
         role: 'member',
         status: 'deactivated',
         anonymized: false,
+        avatarUpdatedAt: null,
         createdAt: T0,
       },
       {
@@ -91,6 +99,7 @@ function seed(): AdminDb {
         role: 'member',
         status: 'deactivated',
         anonymized: true,
+        avatarUpdatedAt: null,
         createdAt: T0,
       },
     ],
@@ -250,6 +259,21 @@ export const adminHandlers = [
     );
   }),
 
+  http.put('/api/me/avatar', async ({ request }) => {
+    const parsed = updateAvatarRequestSchema.safeParse(await readBody(request, 'me/avatar'));
+    if (!parsed.success) return validationError(parsed.error);
+    return HttpResponse.json(
+      updateAvatarResponseSchema.parse({
+        user: { ...sessionFixture.user, avatarUpdatedAt: AVATAR_UPDATED_AT },
+      }),
+    );
+  }),
+
+  http.delete('/api/me/avatar', async ({ request }) => {
+    await readBody(request, 'me/avatar');
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.post('/api/me/password', async ({ request }) => {
     const parsed = changePasswordRequestSchema.safeParse(await readBody(request, 'me/password'));
     if (!parsed.success) return validationError(parsed.error);
@@ -295,6 +319,7 @@ export const adminHandlers = [
           name: parsed.data.name,
           email: parsed.data.email,
           role: 'member',
+          avatarUpdatedAt: null,
         },
         workspace: adminDb.workspace,
         features: sessionFixture.features,
